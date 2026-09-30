@@ -412,3 +412,35 @@ p {
   color: var(--text);
   font-size: var(--text-sm);
 }
+
+/* --------------------------------------------------------------------------
+ * Toggles
+ * -------------------------------------------------------------------------- */
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  /* The whole row is the label, so the tap target is the row rather than the 16px box. */
+  min-height: var(--touch-target);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.toggle__input {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.2rem;
+  accent-color: var(--accent);
+}
+
+.toggle__label {
+  display: block;
+  font-weight: 500;
+}
+
+select.field__input {
+  /* Room for the native arrow, which sits inside the padding box on Safari. */
+  padding-inline-end: var(--space-6);
+}

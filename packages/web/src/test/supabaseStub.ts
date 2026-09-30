@@ -80,6 +80,8 @@ export interface Stub {
     resetPasswordForEmail: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
   };
+  /** Query builders handed out per table. A runaway refetch loop shows up as a large number here. */
+  reads: Map<string, number>;
 }
 
 export function installSupabaseStub(options: StubOptions = {}): Stub {
@@ -91,6 +93,9 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
 
   const fail = (key: keyof NonNullable<StubOptions['authErrors']>) =>
     authErrors[key] ? { error: authErrors[key] } : null;
+
+  /** How many query builders each table has handed out. A runaway refetch shows up here. */
+  const reads = new Map<string, number>();
 
   const calls = {
     signInWithPassword: vi.fn(),
@@ -106,6 +111,7 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
    * real builder behaves, and what lets the app write `.select().eq().maybeSingle()` in any order.
    */
   function builder(table: string) {
+    reads.set(table, (reads.get(table) ?? 0) + 1);
     const rows = tables[table] ?? [];
     const error = tableErrors[table] ?? null;
     let single = false;
@@ -207,6 +213,7 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
       listeners.forEach((listener) => listener(event, next));
     },
     calls,
+    reads,
   };
 }
 

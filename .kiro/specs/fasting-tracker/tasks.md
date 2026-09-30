@@ -253,7 +253,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for the error message being identical for an unknown email and a wrong password, the guard redirecting and restoring, and the health gate blocking the app until acknowledged
   - _Requirements: 1.2, 1.3, 1.5, 1.6, 2.1, 2.2, 2.4, 2.5, 2.8, 17.1_
 
-- [ ] 11. Build the profile data layer and the settings screen
+- [x] 11. Build the profile data layer and the settings screen
   - Write the `profile` data module: read and update, one place for every settings write
   - Build the settings screen: display name, time zone, units, theme, water goal, and the notification preference toggles
   - Implement the password change flow, handling the re-authentication requirement when the session is too old

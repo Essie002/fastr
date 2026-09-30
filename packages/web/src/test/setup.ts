@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach, beforeEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { onlineManager } from '@tanstack/react-query';
 
 /**
  * jsdom setup for the web suites.
@@ -88,7 +89,16 @@ beforeEach(() => {
 
   // jsdom reports navigator.onLine as true and has no way to change it, so the offline paths would
   // otherwise be untestable.
+  //
+  // The event matters as much as the flag. React Query keeps its own online state from `online` and
+  // `offline` events and pauses fetches while it believes there is no network. Resetting the flag alone
+  // leaves it paused for every later test in the file, and those tests fail with a screen that never
+  // loads — nothing about which points at the test that went offline three cases earlier.
   Object.defineProperty(navigator, 'onLine', { configurable: true, writable: true, value: true });
+  // Reset through React Query's own manager rather than by firing an `online` event: it only listens for
+  // those events while a client is mounted, and between tests there is none, so an event is dropped and
+  // it stays paused for the rest of the file.
+  onlineManager.setOnline(true);
 
   window.localStorage?.clear();
   document.documentElement.removeAttribute('data-theme');
@@ -112,8 +122,12 @@ export function setSystemDark(dark: boolean): void {
   });
 }
 
-/** Flips `navigator.onLine` and fires the event the app listens for. */
+/**
+ * Flips connectivity for both things that track it: the app's own `useOnline`, which listens for the
+ * events, and React Query, which keeps its own state and pauses fetches.
+ */
 export function setOnline(online: boolean): void {
   Object.defineProperty(navigator, 'onLine', { configurable: true, writable: true, value: online });
   window.dispatchEvent(new Event(online ? 'online' : 'offline'));
+  onlineManager.setOnline(online);
 }

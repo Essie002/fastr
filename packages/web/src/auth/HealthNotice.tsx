@@ -41,11 +41,31 @@ export function HealthNoticeGate() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: profileQueryKey }),
   });
 
-  if (profile.isLoading) return null;
+  /**
+   * Has the profile ever settled, either way?
+   *
+   * Taken from the query's own timestamps, which only ever move forward, rather than from `isLoading`.
+   * Gating on `isLoading` produces an infinite loop, and the loop is worth describing because nothing
+   * about it looks like one.
+   *
+   * With an errored profile and no data, any refetch puts the query back into a pending state, so
+   * `isLoading` becomes true *again*. The gate then swaps its child for nothing, unmounting the screen
+   * behind it. React Query refetches a stale query whenever a new observer mounts, so the next time the
+   * gate renders its child, that child mounts, refetches, and flips the gate back. Measured at roughly
+   * ten thousand requests in half a second, with a blank screen throughout.
+   *
+   * These two timestamps are set on the first success or failure and never cleared, so the gate stops
+   * rendering nothing after the first attempt and the screen behind it stays mounted.
+   */
+  const hasSettled = profile.dataUpdatedAt > 0 || profile.errorUpdatedAt > 0;
+
+  // Only on the very first attempt, so a first-time user does not glimpse the app before being
+  // interrupted by the notice.
+  if (!hasSettled) return null;
 
   // A failed profile read must not gate the app: the notice is shown when we know it has not been
-  // acknowledged, not when we cannot tell. The screens behind this will report the error themselves.
-  if (profile.isError || !profile.data) return <Outlet />;
+  // acknowledged, not when we cannot tell. The screens behind this report the error themselves.
+  if (!profile.data) return <Outlet />;
 
   if (profile.data.healthNoticeAt !== null) return <Outlet />;
 

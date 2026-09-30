@@ -18,7 +18,16 @@ export function renderApp(
 ): RenderResult & { queryClient: QueryClient } {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0, staleTime: 0 },
+      queries: {
+        retry: false,
+        staleTime: 0,
+        // Not `gcTime: 0`, which looks like the tidy choice and is a trap: a failed query with no
+        // observers is collected the instant it settles, so the next component to mount starts a fresh
+        // fetch, which fails, which is collected — and the screen sits in a loading state for ever while
+        // the cache shows an error. Cost an hour to find. A fresh client per render already gives the
+        // isolation `gcTime: 0` was reaching for.
+        gcTime: Infinity,
+      },
       mutations: { retry: false },
     },
   });
