@@ -12,9 +12,18 @@
 -- Hardcoded rather than computed so a reset produces the same hash every time and the value is
 -- visible in review.
 
+-- The empty strings below are not decoration. Auth reads these columns into non-nullable strings,
+-- so a NULL left by a hand-written insert makes every sign-in fail with a 500 and
+--   Scan error on column index 3, name "confirmation_token": converting NULL to string
+-- which reads like a broken database rather than a seed that skipped eight columns. They have no
+-- default, because normally only Auth itself writes this table.
+
 insert into auth.users (
   id, instance_id, aud, role, email, encrypted_password,
   email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token,
+  email_change, email_change_token_new, email_change_token_current,
+  phone_change, phone_change_token, reauthentication_token,
   created_at, updated_at
 )
 values
@@ -27,6 +36,7 @@ values
     now(),
     '{"provider":"email","providers":["email"]}',
     '{"display_name":"Ada","time_zone":"Africa/Nairobi"}',
+    '', '', '', '', '', '', '', '',
     now(), now()
   ),
   (
@@ -38,6 +48,7 @@ values
     now(),
     '{"provider":"email","providers":["email"]}',
     '{"display_name":"Ben","time_zone":"Europe/London"}',
+    '', '', '', '', '', '', '', '',
     now(), now()
   );
 

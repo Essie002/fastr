@@ -196,7 +196,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Add `npm run setup`: start Supabase, apply migrations, seed, and write the local URL and anon key into `packages/web/.env.local` by parsing `supabase status -o env`
   - _Requirements: 1.6, 5.2, 5.9, 5.11, 17.3, 18.1, 20.1, 20.2, 20.3, 20.7_
 
-- [ ] 4. Add the remaining tables
+- [x] 4. Add the remaining tables
   - Migrate `weight_entries` with the 20 kg to 400 kg range check and a unique constraint per user per day
   - Migrate `water_entries` and `day_notes`, with the note length check and the mood and energy range checks
   - Migrate `push_subscriptions` with a unique endpoint, and `reminders` with the weekday array check
@@ -204,7 +204,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Enable RLS on all of them with the same policy shape, except `notifications`, which gets a select policy only
   - _Requirements: 7.6, 8.1, 11.1, 11.4, 12.1, 13.1, 18.1_
 
-- [ ] 5. Prove the security boundary
+- [x] 5. Prove the security boundary
   - Add a test helper that signs in as each of the two seed users and returns a client per user
   - For every table, write tests asserting that user B cannot select, insert on behalf of, update, or delete user A's rows, and that each attempt fails or returns nothing rather than partially succeeding
   - Add a test asserting a user cannot update their own row to set `user_id` to another user, which is the hole left by a policy with `using` but no `with check`
@@ -212,7 +212,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Make the database tests skip with a warning when local Supabase is not running, and add an environment flag that turns a skip into a failure, for CI
   - _Requirements: 18.1, 18.2, 18.3_
 
-- [ ] 6. Prove the constraints and the schema parity
+- [x] 6. Prove the constraints and the schema parity
   - Write tests asserting Postgres rejects: two active fasts for one user, a fast overlapping an existing one, an end before its start, a goal of 4321 minutes, a weight of 19 kg and of 401 kg, a note over 1,000 characters, and a mood of 0 or 6
   - Write tests asserting Postgres accepts the values immediately inside each of those boundaries
   - Write a parity test that feeds each Zod schema's boundary values to Postgres and asserts both accept and reject exactly the same set, so a rule tightened in one place and forgotten in the other fails

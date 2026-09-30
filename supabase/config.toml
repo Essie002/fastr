@@ -226,9 +226,13 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Requirement 1.1 again, for the email provider specifically. Both flags have to be off: leaving
-# this one true would let anyone POST to /auth/v1/signup and create an account.
-enable_signup = false
+# Left ON, and the comment matters because turning it off looks like the right thing to do.
+#
+# This flag does not mean "let strangers register". It controls whether the email provider is
+# available at all, so setting it false disables email *sign-in* too and every login fails with
+# "Email logins are disabled". Invite-only is the top-level `[auth] enable_signup = false` above;
+# this one has to stay true or nobody can sign in, invited or not.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true

@@ -28,9 +28,15 @@ export default defineConfig({
           root: './supabase',
           environment: 'node',
           include: ['tests/**/*.test.ts'],
-          // Starting a transaction, signing in two users, and waiting on Postgres is slower than
-          // the default five seconds on a cold stack.
+          // Signing in two users and waiting on Postgres is slower than the default five seconds on
+          // a cold stack.
           testTimeout: 30_000,
+          // There is one local database, and these suites plant fixtures and clear them between
+          // tests. Run in parallel, two files reset each other's rows mid-assertion and the failures
+          // look like RLS bugs, which is the most misleading possible outcome for this suite. The
+          // honest fix is one file at a time; the alternative, a schema per worker, is a lot of
+          // machinery for a suite that takes three seconds.
+          fileParallelism: false,
           passWithNoTests: true,
         },
       },
