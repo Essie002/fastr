@@ -1,0 +1,292 @@
+@import './tokens.css';
+
+/*
+ * Base styles and the app shell's layout.
+ *
+ * The shell is one grid that changes shape at 768px: a bottom tab bar on a phone, a side rail on a
+ * laptop. Requirement 15.1. There is no separate mobile component tree, because two trees means two
+ * places to fix every accessibility problem.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Respects a font size the user has changed in their browser, which a px base would override. */
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  /* Keeps content clear of a notch and the home-screen indicator on an installed PWA. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 var(--space-3);
+  line-height: 1.2;
+}
+h1 {
+  font-size: var(--text-xl);
+}
+h2 {
+  font-size: var(--text-lg);
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+/* Requirement 19.1. A visible focus indicator everywhere, and never removed. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Requirement 19.4. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* For screen readers only: present in the accessibility tree, invisible on screen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -120%;
+  z-index: 20;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--accent);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  text-decoration: none;
+}
+.skip-link:focus {
+  translate: -50% 0;
+}
+
+/* --------------------------------------------------------------------------
+ * App shell
+ * -------------------------------------------------------------------------- */
+
+.shell {
+  display: grid;
+  min-height: 100dvh;
+  /* Phone: content, then the tab bar. */
+  grid-template: 'main' 1fr 'nav' auto / 1fr;
+}
+
+.shell__main {
+  grid-area: main;
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+
+.shell__nav {
+  grid-area: nav;
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* Clears the home-screen indicator on an installed PWA. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav__list {
+  display: flex;
+  justify-content: space-around;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nav__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  /* Requirement 15.5. */
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+.nav__link:hover {
+  color: var(--text);
+}
+
+/*
+ * The current page is marked three ways: colour, weight, and a bar. Requirement 19.3 rules out colour
+ * alone, and `aria-current` in the markup is what a screen reader announces.
+ */
+.nav__link[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-inline: var(--space-2);
+  top: 0;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+.nav__item {
+  position: relative;
+  display: flex;
+}
+
+.nav__icon {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+@media (min-width: 48rem) {
+  .shell {
+    grid-template: 'nav main' 1fr / 12rem 1fr;
+  }
+
+  .shell__nav {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100dvh;
+    border-top: none;
+    border-inline-end: 1px solid var(--border);
+    padding: var(--space-5) var(--space-3);
+  }
+
+  .nav__list {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-1);
+  }
+
+  .nav__link {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+  }
+
+  .nav__link[aria-current='page'] {
+    background: var(--accent-soft);
+  }
+  .nav__link[aria-current='page']::before {
+    inset: 0 auto 0 0;
+    width: 3px;
+    height: auto;
+  }
+
+  .shell__main {
+    padding: var(--space-6) var(--space-5) var(--space-8);
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Banners
+ * -------------------------------------------------------------------------- */
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.banner--offline {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--text);
+}
+
+.banner--error {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--text);
+}
+
+.banner__icon {
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Primitives used by the route shells
+ * -------------------------------------------------------------------------- */
+
+.card {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.stack > * + * {
+  margin-top: var(--space-4);
+}
+
+.fatal {
+  max-width: 34rem;
+  margin: var(--space-8) auto;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+}
+
+.fatal code {
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+}

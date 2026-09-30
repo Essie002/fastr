@@ -8,10 +8,13 @@
     "node": ">=22"
   },
   "workspaces": [
-    "packages/shared"
+    "packages/shared",
+    "packages/web"
   ],
   "scripts": {
+    "dev": "npm run dev --workspace @fastr/web",
     "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview --workspace @fastr/web",
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",

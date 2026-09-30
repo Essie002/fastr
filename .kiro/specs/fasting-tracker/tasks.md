@@ -232,7 +232,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests covering: starting a fast queues the right rows, editing the start time reschedules them, ending or cancelling a fast cancels them, deleting a fast removes them by cascade, stage rows beyond the goal are never queued, and a user with notifications switched off gets none
   - _Requirements: 5.3, 7.4, 7.5, 7.6_
 
-- [ ] 9. Build the web app foundation
+- [x] 9. Build the web app foundation
   - Create `packages/web` with Vite, React 18, TypeScript and `base: '/fastr/'`, and a build step that copies `index.html` to `404.html` so deep links load on GitHub Pages
   - Add the router with a matching `basename`, and the route shells for Timer, Plans, History, Stats, Settings and SignIn
   - Create the single Supabase client module reading `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`, failing loudly at startup if either is missing

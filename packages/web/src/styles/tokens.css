@@ -1,0 +1,97 @@
+/*
+ * Colour and spacing tokens. Requirement 14.
+ *
+ * Custom properties rather than a JavaScript theme object, so switching theme is one attribute change
+ * on <html> and costs no re-render. It is also what lets the boot script in index.html apply a theme
+ * before React exists.
+ *
+ * Every text-on-background pair below is checked arithmetically against WCAG 2.1 AA by
+ * src/theme/contrast.test.ts. That test exists because axe derives contrast from rendered pixels and
+ * jsdom does not paint, so axe's contrast rules are disabled in this project — which would otherwise
+ * leave the criterion most easily broken by a design tweak as the only one nothing verifies.
+ */
+
+:root {
+  /* Spacing, on a 4px grid. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-8: 3rem;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-full: 999px;
+
+  /* Requirement 15.5. Nothing tappable may be smaller than this. */
+  --touch-target: 2.75rem; /* 44px */
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  /* Tabular figures, so a ticking timer does not shift width every second. */
+  --font-numeric: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-timer: clamp(2.5rem, 12vw, 4rem);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 16px rgb(0 0 0 / 0.1);
+
+  --transition: 160ms ease;
+}
+
+/* Light. The default, and what the boot script falls back to. */
+:root,
+[data-theme='light'] {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-sunken: #eeeeea;
+  --border: #d8d8d2;
+
+  --text: #16181a; /* 15.8:1 on --bg */
+  --text-muted: #5c6066; /* 6.1:1  on --bg */
+  --text-on-accent: #ffffff;
+
+  --accent: #1f6f4a; /* 4.9:1  on --bg  */
+  --accent-strong: #185a3c;
+  --accent-soft: #e2efe8;
+
+  --warn: #8a5300; /* 4.8:1  on --bg */
+  --warn-soft: #fbf0dd;
+  --danger: #a8231f; /* 5.6:1  on --bg */
+  --danger-soft: #fbe6e5;
+
+  --ring-track: #deded8;
+  --ring-fill: var(--accent);
+}
+
+[data-theme='dark'] {
+  --bg: #111312;
+  --surface: #1b1e1d;
+  --surface-sunken: #0c0e0d;
+  --border: #333836;
+
+  --text: #eef0ee; /* 15.4:1 on --bg */
+  --text-muted: #a2a8a4; /* 7.2:1  on --bg */
+  --text-on-accent: #07120c;
+
+  --accent: #5fc98f; /* 8.5:1  on --bg */
+  --accent-strong: #7ad6a4;
+  --accent-soft: #17291f;
+
+  --warn: #e0a85c; /* 8.4:1  on --bg */
+  --warn-soft: #2a2114;
+  --danger: #f08b86; /* 7.6:1  on --bg */
+  --danger-soft: #2c1817;
+
+  --ring-track: #2c312f;
+  --ring-fill: var(--accent);
+}

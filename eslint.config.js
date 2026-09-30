@@ -71,5 +71,16 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
 
+  // Plain browser scripts served as-is from `public/`. The theme bootstrap lives here rather than in
+  // the module graph because it has to run before first paint, so it is a classic script with browser
+  // globals and no imports, not an ES module.
+  {
+    files: ['packages/web/public/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: globals.browser,
+    },
+  },
+
   prettier,
 );

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Replaced at build time by the cspPlugin in vite.config.ts, which injects this build's
+         Supabase origin. GitHub Pages cannot set headers, so the policy travels in the document. -->
+    <meta http-equiv="Content-Security-Policy" content="%CSP%" />
+
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Repainted by the theme boot script below so the phone's status bar matches the app. -->
+    <meta name="theme-color" content="#f7f7f5" />
+
+    <title>Fastr</title>
+    <meta
+      name="description"
+      content="Intermittent fasting tracker. Pick a plan, start a fast, get told when it's done."
+    />
+
+    <!--
+      The theme, applied before first paint. Requirement 14.2.
+
+      Synchronous and external, which is a deliberate pair of choices. Synchronous because anything
+      deferred paints the wrong colours first and then corrects them, which is the flash this is meant
+      to prevent. External because the Content Security Policy sets `script-src 'self'`, and an inline
+      script would need either 'unsafe-inline' — weakening the policy for every script on the page —
+      or a build-time hash that breaks the moment the snippet is minified differently. A same-origin
+      file costs one cached request and keeps the policy strict.
+    -->
+    <script src="%BASE_URL%theme-boot.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

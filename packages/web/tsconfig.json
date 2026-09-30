@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    // `node` alongside `vite/client` because one test reads `public/theme-boot.js` off disk to prove
+    // it has not drifted from the React theme module. That test needs node:fs, and it is worth the
+    // wider global surface: the alternative is two copies of the theme rule with nothing comparing
+    // them.
+    "types": ["vite/client", "node"],
+    // The web package is type-checked but never emits: Vite builds the bundle. Without this, `tsc -b`
+    // writes a dist/ full of .js nobody loads and Vite silently ignores.
+    "noEmit": false,
+    "emitDeclarationOnly": true
+  },
+  "include": ["src/**/*"],
+  "references": [{ "path": "../shared" }]
+}

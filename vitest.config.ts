@@ -20,8 +20,22 @@ export default defineConfig({
           include: ['src/**/*.test.ts'],
         },
       },
-      // The `web` project, jsdom with a Testing Library setup file, is added in task 9 alongside
-      // the package itself.
+      {
+        test: {
+          name: 'web',
+          root: './packages/web',
+          environment: 'jsdom',
+          // An explicit origin, because jsdom disables localStorage on an opaque one and the app
+          // reads it on every load to apply the theme. Without this, `localStorage` is simply absent
+          // and the failure is a confusing "cannot read properties of undefined" in setup rather
+          // than anything about origins. The path mirrors the deployed base so anything that reads
+          // location sees a realistic URL.
+          environmentOptions: { jsdom: { url: 'http://localhost:5173/fastr/' } },
+          include: ['src/**/*.test.{ts,tsx}'],
+          setupFiles: ['./src/test/setup.ts'],
+          passWithNoTests: true,
+        },
+      },
       {
         test: {
           name: 'db',
