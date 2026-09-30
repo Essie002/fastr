@@ -19,10 +19,17 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test"
+    "verify": "npm run typecheck && npm run lint && npm run format:check && npm run test",
+    "setup": "node scripts/setup.mjs",
+    "db:start": "node scripts/supabase.mjs start",
+    "db:stop": "node scripts/supabase.mjs stop",
+    "db:reset": "node scripts/supabase.mjs db reset",
+    "db:status": "node scripts/supabase.mjs status",
+    "db:psql": "node scripts/psql.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@supabase/supabase-js": "2.117.2",
     "@types/node": "26.2.0",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
@@ -32,6 +39,7 @@
     "fast-check": "4.3.0",
     "globals": "17.11.0",
     "prettier": "3.9.6",
+    "supabase": "2.118.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.67.0",
     "vitest": "4.1.10"

@@ -399,8 +399,14 @@ laptops does not cost me an afternoon.
    opens ready to run in VS Code, Kiro, or GitHub Codespaces on any machine.
 5. The repo SHALL include a `Dockerfile` that builds the web app and serves it with a small static server, so the front end
    can also be run as a container outside GitHub Pages.
-6. The README SHALL state which container runtimes are supported. Docker is the supported path for the Supabase CLI; Podman
-   SHALL be documented as best-effort, with the known workaround if it works, since the Supabase CLI targets Docker.
+6. The project SHALL run its local stack under **either Docker or Podman**, and `npm run setup` SHALL detect which is
+   present and configure it, rather than requiring the contributor to export a socket path. Podman is a first-class path,
+   not a footnote: Docker Desktop is blocked by policy on at least one machine this project is developed on, so treating it
+   as the only option would mean no local stack at all there.
+7. Local Supabase SHALL run with the analytics stack disabled, because its log collector bind-mounts the container
+   runtime's own socket, which Podman on macOS cannot share into its VM. Nothing in Fastr reads those logs.
+8. The README SHALL state what to do when no container runtime is permitted at all: a hosted Supabase project used as a
+   development project, which needs no runtime, at the cost of the offline workflow.
 7. The seed SHALL create two local test users with known passwords, for local development only.
 
 ### Requirement 21: Deployment

@@ -16,4 +16,8 @@ packages/web/.env.local
 supabase/.branches/
 supabase/.temp/
 
+# Written by `npm run setup`: the container socket this machine happens to use. Machine-specific,
+# so it is generated rather than committed.
+.docker-host
+
 .DS_Store

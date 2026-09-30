@@ -830,13 +830,54 @@ npm run dev          # Vite on :5173 against local Supabase on :54321
 nobody copies a key by hand. The local stack includes Postgres, Auth, Realtime, Edge Functions, Studio, and Inbucket for
 email, which means invite links and password resets are testable offline.
 
-Two honest limitations:
+### Podman, and why it is not a footnote
+
+Docker Desktop is blocked by company policy on the machine this project is developed on. That turns "which container
+runtime" from a preference into the difference between having a local stack and not having one, so the answer is recorded
+here rather than left to a README aside.
+
+**Podman works, with one configuration change.** The Supabase CLI has no Podman support of its own; it speaks the Docker API
+and finds the daemon through `DOCKER_HOST`. `podman machine start` runs a Linux VM under Apple's own hypervisor and prints a
+Docker-compatible socket, and pointing `DOCKER_HOST` at it is enough for every container in the stack except one.
+
+The exception is the analytics stack. Its log collector bind-mounts the runtime's own socket into a container, and under
+Podman on macOS that socket lives in a per-user temp directory the VM cannot share, so the whole stack dies with:
+
+```
+failed to create docker container: making volume mountpoint for volume
+/var/folders/.../podman-machine-default-api.sock: operation not supported
+```
+
+So `[analytics] enabled = false` in `config.toml`. Nothing in Fastr reads local logs through Logflare, and it is two
+containers and several hundred megabytes for a dashboard nobody opens. `[storage]` is off for the same kind of reason:
+Fastr stores no files, so those containers would idle.
+
+The alternative fix is `sudo podman-mac-helper install`, which makes Podman listen on the conventional
+`/var/run/docker.sock` so the mount resolves. Rejected as the documented path because it needs sudo and installs a launchd
+helper, which is a worse thing to ask of a contributor than turning off a feature the project does not use.
+
+`npm run setup` finds the runtime, starts the Podman machine if needed, sizes it (the 2 GB default is not enough for
+Postgres, Auth, Realtime and Studio at once), and writes the socket to `.docker-host` so the `db:*` scripts inherit it. A
+contributor exports nothing.
+
+**The default VM size is a trap worth naming.** With 2 GB the stack half-starts and fails in ways that look like application
+bugs, so setup asks for 6 GB and 4 CPUs.
+
+### If no container runtime is permitted at all
+
+Then local Supabase is not available, and the fallback is a **second hosted Supabase project used as a development
+project**. The free plan allows two active projects, which is exactly enough for `fastr-dev` and `fastr-prod`. Migrations go
+up with `supabase db push`, which needs only the network. What is lost is the offline workflow, the fast `db reset`, and the
+ability to run the database tests without internet. It is a real fallback rather than a good one, and it is documented so
+the project is not dead on a locked-down machine.
+
+### Other honest limitations
 
 - **`pg_cron` in the local stack does not reliably fire the scheduled job**, so the sender is invoked directly during
-  development with `npm run send:notifications`, and its scheduling is verified against the hosted project. This is stated
-  here so it is not discovered as a bug.
-- **Podman is best-effort.** The Supabase CLI targets Docker. Setting `DOCKER_HOST` to the Podman socket works for some
-  people and not others, so Docker is the documented path and Podman is documented as untested, rather than promised.
+  development with `npm run send:notifications`, and its scheduling is verified against the hosted project. Stated here so
+  it is not discovered as a bug.
+- **The local stack binds to `0.0.0.0`, not just localhost**, and its keys are shared defaults. On a café network, anyone on
+  the same network can reach the local Studio and database. Stop the stack when not using it.
 
 Seed users (local only, Requirement 20.7): `a@fastr.test` and `b@fastr.test`, both with password `fastr-local-dev`. Two
 rather than one, because the RLS tests need a second user to fail against.

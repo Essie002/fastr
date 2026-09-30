@@ -24,8 +24,9 @@ tries to deliver them.
 
 **Two non-coding prerequisites**, neither of which blocks anything before the task that needs it:
 
-- Before task 3: install Docker and confirm `npx supabase start` comes up. This is the one hard dependency of local
-  development.
+- Before task 3: a container runtime. **Resolved: Podman, not Docker.** Docker Desktop is blocked by policy on this
+  machine; Podman 6 works once `[analytics]` is off in `config.toml`, and `npm run setup` handles the rest. See "Podman, and
+  why it is not a footnote" in the design.
 - Before task 20: create the hosted Supabase project, turn off public sign-up, and enable the `pg_cron` and `pg_net`
   extensions. Task 20 is the first that cannot be fully verified locally, since `pg_cron` does not fire reliably in the
   local stack.
@@ -185,7 +186,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write `fast-check` property tests asserting the streak is invariant under input order, and that a fast ending during a daylight saving transition is counted exactly once
   - _Requirements: 6.1, 6.2, 10.1, 10.2, 10.3, 10.4, 10.6, 11.2_
 
-- [ ] 3. Stand up local Supabase and the core schema
+- [x] 3. Stand up local Supabase and the core schema
   - Add the Supabase CLI as a pinned dev dependency and run `supabase init`
   - Write the first migration: the `btree_gist` extension, `profiles`, and `fasts` exactly as specified in the design, including the `goal_minutes` range check capping a fast at 72 hours, the status and end-time consistency check, the `fasts_no_overlap` exclusion constraint, the partial unique index enforcing one active fast, and the two read indexes
   - Add a trigger on `auth.users` that creates a `profiles` row on sign-up, with the display name taken from the invite metadata
