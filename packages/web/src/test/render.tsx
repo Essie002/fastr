@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ThemeProvider } from '../theme/ThemeProvider.js';
+import { AuthProvider } from '../auth/AuthProvider.js';
 
 /**
  * Renders a component inside the providers the app gives it.
@@ -13,7 +14,7 @@ import { ThemeProvider } from '../theme/ThemeProvider.js';
  */
 export function renderApp(
   ui: ReactNode,
-  { route = '/' }: { route?: string } = {},
+  { route = '/', withAuth = true }: { route?: string; withAuth?: boolean } = {},
 ): RenderResult & { queryClient: QueryClient } {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -27,7 +28,11 @@ export function renderApp(
       <ThemeProvider>
         {/* MemoryRouter rather than BrowserRouter: jsdom shares one URL across a file, so real history
             leaks the route from one test into the next. */}
-        <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+        <MemoryRouter initialEntries={[route]}>
+          {/* Optional, because a component that reads auth needs the provider, and a test of the
+              provider itself must be able to render without one. */}
+          {withAuth ? <AuthProvider>{ui}</AuthProvider> : ui}
+        </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
   );

@@ -243,7 +243,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Add `src/test/setup.ts` with Testing Library, jest-dom and axe
   - _Requirements: 14.1, 14.2, 15.1, 15.5, 15.6, 18.7_
 
-- [ ] 10. Build the auth screens
+- [x] 10. Build the auth screens
   - Build the sign-in screen with a single generic error message for any credential failure
   - Build invite acceptance: set a display name and password from the invite link, then sign in
   - Build the password reset request and completion screens

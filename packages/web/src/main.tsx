@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { App } from './App.js';
+import { AuthProvider } from './auth/AuthProvider.js';
 import { ThemeProvider } from './theme/ThemeProvider.js';
 import { createQueryClient } from './data/queryClient.js';
 import { CONFIG_HELP, ConfigError, readConfig } from './config.js';
@@ -53,7 +54,11 @@ try {
             app loads with no styles or every link 404s, and each looks like a different bug.
           */}
           <BrowserRouter basename={import.meta.env.BASE_URL}>
-            <App />
+            {/* Inside the router, because the route guard reads the session and the auth screens
+                navigate on success. */}
+            <AuthProvider>
+              <App />
+            </AuthProvider>
           </BrowserRouter>
         </ThemeProvider>
       </QueryClientProvider>

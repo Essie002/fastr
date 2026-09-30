@@ -290,3 +290,125 @@ p {
   font-family: var(--font-numeric);
   font-size: var(--text-sm);
 }
+
+/* --------------------------------------------------------------------------
+ * Forms, buttons, and the auth screens
+ * -------------------------------------------------------------------------- */
+
+.auth {
+  width: 100%;
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+}
+
+.auth__title {
+  text-align: center;
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-5);
+}
+
+.auth__note {
+  font-size: var(--text-sm);
+  margin-bottom: 0;
+}
+
+.field {
+  display: block;
+}
+
+.field__label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.field__input {
+  display: block;
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  /* 1rem, because iOS Safari zooms the page when a focused input is under 16px. */
+  font: inherit;
+  font-size: var(--text-base);
+}
+
+.field__input:disabled {
+  opacity: 0.6;
+}
+
+.field__hint {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--transition),
+    opacity var(--transition);
+}
+
+.button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.button--primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.button--secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.button--danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+/*
+ * A button that reads as a link. Still a <button>, because it performs an action rather than navigating,
+ * and a screen reader announcing "link" for something that does not change the address is a lie.
+ */
+.button--link {
+  min-height: auto;
+  padding: var(--space-1) 0;
+  background: none;
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.form-error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-sm);
+}

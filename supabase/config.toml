@@ -161,12 +161,15 @@ site_url = "http://localhost:5173"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# Vite's dev server, and the deployed Pages origin, so an invite or reset link opened on a phone
-# lands on the real app rather than being refused as an unlisted redirect.
+# Vite's dev server, and the deployed Pages origin, so an invite or reset link opened on a phone lands on
+# the real app rather than being refused as an unlisted redirect.
+#
+# `/auth/callback` is the only route that turns a URL into a session, and these are the exact addresses it
+# is allowed to be reached at. A wildcard would be less typing and would let any path on the origin receive
+# a token.
 additional_redirect_urls = [
-  "http://localhost:5173",
-  "http://localhost:5173/fastr/",
-  "https://essie002.github.io/fastr/",
+  "http://localhost:5173/fastr/auth/callback",
+  "https://essie002.github.io/fastr/auth/callback",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
