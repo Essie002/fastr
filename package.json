@@ -25,7 +25,9 @@
     "db:stop": "node scripts/supabase.mjs stop",
     "db:reset": "node scripts/supabase.mjs db reset",
     "db:status": "node scripts/supabase.mjs status",
-    "db:psql": "node scripts/psql.mjs"
+    "db:psql": "node scripts/psql.mjs",
+    "gen:stages": "node --experimental-strip-types scripts/gen-stages.mjs",
+    "check:rls": "node scripts/check-rls.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",

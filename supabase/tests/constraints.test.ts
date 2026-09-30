@@ -34,6 +34,16 @@ import {
 const BASE = Date.UTC(2021, 0, 1);
 const at = (hours: number) => new Date(BASE + hours * 3_600_000).toISOString();
 
+/**
+ * Recent times, for the tests that insert an *active* fast.
+ *
+ * Those cannot use the fixed 2021 base: the notification trigger enforces Requirement 5.3, so a fast
+ * being started may be backdated at most 48 hours. A finished fast has no such limit, because
+ * Requirement 9.4 allows logging history from months ago, which is why the rest of this file still
+ * uses `at()`.
+ */
+const recently = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
+
 describe.skipIf(!hasStack())('database constraints', () => {
   let stack: LocalStack;
   let user: SupabaseClient;
@@ -68,18 +78,21 @@ describe.skipIf(!hasStack())('database constraints', () => {
   };
 
   describe('one active fast per user (Req 5.2)', () => {
+    const activeFast = {
+      plan_id: '16:8',
+      goal_minutes: 960,
+      start_at: recently(2),
+      ended_at: null,
+      status: 'active',
+    };
+
     it('accepts the first active fast', async () => {
-      expect(await insertFast({ ...validFast, ended_at: null, status: 'active' })).toBeNull();
+      expect(await insertFast(activeFast)).toBeNull();
     });
 
     it('refuses a second active fast', async () => {
-      await insertFast({ ...validFast, ended_at: null, status: 'active' });
-      const error = await insertFast({
-        ...validFast,
-        start_at: at(1),
-        ended_at: null,
-        status: 'active',
-      });
+      await insertFast(activeFast);
+      const error = await insertFast({ ...activeFast, start_at: recently(1) });
       expect(error).not.toBeNull();
       // Caught by the exclusion constraint rather than the partial unique index: two
       // [start, infinity) ranges always intersect, so the exclusion always fires first. The index is

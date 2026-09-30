@@ -218,14 +218,14 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write a parity test that feeds each Zod schema's boundary values to Postgres and asserts both accept and reject exactly the same set, so a rule tightened in one place and forgotten in the other fails
   - _Requirements: 5.2, 5.9, 11.4, 13.1, 17.3, 18.6_
 
-- [ ] 7. Generate the fasting_stages table from the shared list
+- [x] 7. Generate the fasting_stages table from the shared list
   - Add a `fasting_stages` table with a key, minute offset, name and description
   - Write `scripts/gen-stages.mjs`, which reads the stage list from `packages/shared` and writes an idempotent migration containing a `truncate` and an `insert`
   - Add `npm run gen:stages`, run it, and commit the generated migration
   - Add a test asserting the table contents match the shared list exactly, so the CI drift check has something to fail on
   - _Requirements: 6.1, 6.6_
 
-- [ ] 8. Queue notifications from a database trigger
+- [x] 8. Queue notifications from a database trigger
   - Write `sync_fast_notifications` as a `security definer` function: reject a start time in the future or more than 48 hours in the past on insert, cancel every pending notification for the fast, and return early when the fast is no longer active
   - Queue the goal notification, the one-hour-before notification, and one notification per stage falling within the fast's goal, each conditional on the matching profile preference and on the due time still being in the future, using `on conflict do nothing`
   - Attach the trigger to insert and to updates of `start_at`, `goal_minutes` and `status`
