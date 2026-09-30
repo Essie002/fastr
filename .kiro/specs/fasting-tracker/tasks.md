@@ -262,7 +262,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for each update path and for the optimistic theme change persisting to the profile
   - _Requirements: 2.6, 2.7, 3.1, 3.2, 14.1, 14.2, 17.1_
 
-- [ ] 12. Build the plan catalog
+- [x] 12. Build the plan catalog
   - Build the catalog screen from the shared plan list: fasting and eating hours, difficulty, and description per plan, laid out as cards
   - Mark plans of 24 hours or more as extended and show the extended-fast notice on them
   - Implement selecting a plan, which saves it as the default without touching a fast in progress
