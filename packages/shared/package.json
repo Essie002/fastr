@@ -1,0 +1,16 @@
+{
+  "name": "@fastr/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain types, plan catalog, fasting stages, schemas, and the pure functions over them.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.4.3"
+  }
+}

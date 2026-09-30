@@ -1,0 +1,19 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Secrets. `.env.example` is the one that is committed, and holds placeholders only.
+.env
+.env.*
+!.env.example
+
+# Written by `npm run setup` from `supabase status`, so it is generated, not authored.
+packages/web/.env.local
+
+# Supabase CLI working directories.
+supabase/.branches/
+supabase/.temp/
+
+.DS_Store

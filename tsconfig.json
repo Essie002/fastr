@@ -1,0 +1,7 @@
+{
+  // `packages/web` joins this list in task 9. It is left out rather than stubbed, because a
+  // package containing one placeholder file to satisfy a build is worse than a package that does
+  // not exist yet.
+  "files": [],
+  "references": [{ "path": "./packages/shared" }]
+}
