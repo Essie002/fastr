@@ -299,7 +299,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for pagination, for the calendar marking the local day a fast ended on, and for an edit that would overlap being rejected
   - _Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 13.4_
 
-- [ ] 16. Build stats and the weight log
+- [x] 16. Build stats and the weight log
   - Build the stats screen from the shared functions: current streak, longest streak, total completed, 7 and 30 day averages, longest fast, and goal completion rate, always derived and never stored
   - Write the `weight` data module and build logging, editing and deleting an entry in the user's chosen unit, stored as grams
   - Build the weight chart over 30 days, 90 days, 1 year and all time, with a data table alternative for screen readers and no meaning conveyed by colour alone
