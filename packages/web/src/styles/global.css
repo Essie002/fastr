@@ -950,3 +950,85 @@ textarea.field__input {
   border-bottom: 1px solid var(--border);
   font-variant-numeric: tabular-nums;
 }
+
+/* --------------------------------------------------------------------------
+ * Water
+ * -------------------------------------------------------------------------- */
+
+.water__bar {
+  height: 0.75rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.water__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: inline-size var(--transition);
+}
+
+.water__total {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.water__quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.water__quick .button {
+  flex: 1;
+  min-width: 7rem;
+}
+
+.water__custom {
+  display: flex;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.water__custom .field {
+  flex: 1;
+}
+
+.water__summary {
+  min-height: var(--touch-target);
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.water__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.water__list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+.end-reflection summary {
+  min-height: var(--touch-target);
+  display: flex;
+  align-items: center;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}

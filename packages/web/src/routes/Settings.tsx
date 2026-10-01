@@ -103,6 +103,14 @@ export default function Settings() {
           ]}
           onChange={(volume_unit) => save.mutate({ volume_unit })}
         />
+
+        {/* Requirement 12.2. Always in millilitres, since it is stored that way and this is a one-off setting
+            rather than something logged daily. */}
+        <WaterGoalField
+          key={p.waterGoalMl}
+          value={p.waterGoalMl}
+          onSave={(water_goal_ml) => save.mutate({ water_goal_ml })}
+        />
       </section>
 
       <section className="card stack" aria-labelledby="settings-appearance">
@@ -330,5 +338,43 @@ function SessionButtons({
         </p>
       </div>
     </>
+  );
+}
+
+/**
+ * The daily water goal, committed on blur like the display name.
+ *
+ * Bounded here as well as in the database, and the range is wide: 100 ml is implausibly low and 10 litres is
+ * past the point where water becomes dangerous, so both ends are worth refusing rather than storing.
+ */
+function WaterGoalField({ value, onSave }: { value: number; onSave: (value: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+
+  return (
+    <div className="field">
+      <label className="field__label" htmlFor="water-goal">
+        Daily water goal (ml)
+      </label>
+      <input
+        id="water-goal"
+        className="field__input"
+        type="number"
+        inputMode="numeric"
+        min={100}
+        max={10000}
+        step={50}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => {
+          const parsed = Number(draft);
+          if (!Number.isFinite(parsed) || parsed < 100 || parsed > 10_000) {
+            setDraft(String(value));
+            return;
+          }
+          const rounded = Math.round(parsed);
+          if (rounded !== value) onSave(rounded);
+        }}
+      />
+    </div>
   );
 }

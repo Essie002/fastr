@@ -306,7 +306,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for the stats matching the pure functions on the same data, and for the chart's table alternative being present and correct
   - _Requirements: 10.1, 10.2, 10.4, 10.5, 11.1, 11.2, 11.3, 11.5, 19.3_
 
-- [ ] 17. Build water and mood logging
+- [x] 17. Build water and mood logging
   - Build the water quick-add buttons and a custom amount on the timer screen, with today's total against the user's goal, undo of the last entry, and editing or deleting any day's entries, where today means the user's local calendar day
   - Build the mood and energy pickers and the note field, attachable to a fast or to a day
   - Add the optional, skippable "How did it go?" prompt when ending a fast

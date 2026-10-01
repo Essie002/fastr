@@ -24,6 +24,8 @@ import { now } from '../time/clock.js';
 import { TimerDisplay } from '../components/TimerDisplay.js';
 import { ExtendedFastNotice } from '../components/ExtendedFastNotice.js';
 import { StageAnnouncer } from '../components/StageAnnouncer.js';
+import { MoodPicker } from '../components/MoodPicker.js';
+import { WaterTracker } from '../components/WaterTracker.js';
 
 /**
  * The home screen. Requirements 5 and 6.
@@ -47,6 +49,11 @@ export default function Timer() {
   const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [backdating, setBackdating] = useState(false);
   const [backdateHours, setBackdateHours] = useState('');
+
+  // The optional reflection shown while ending a fast. Requirement 13.2.
+  const [mood, setMood] = useState<number | null>(null);
+  const [energy, setEnergy] = useState<number | null>(null);
+  const [note, setNote] = useState('');
 
   const invalidate = () =>
     Promise.all([
@@ -181,12 +188,40 @@ export default function Timer() {
                   ? `You reached your goal. This will be recorded as ${formatDuration(elapsedMinutes)}.`
                   : `You are ${formatDuration(fast.goalMinutes - elapsedMinutes)} short of your goal, so this will be recorded as ended early.`}
               </p>
+
+              {/*
+                Requirement 13.2. Offered, and skippable: the buttons below work whether or not anything here
+                is filled in, so ending a fast never requires answering a question first.
+              */}
+              <details className="end-reflection">
+                <summary>How did it go? (optional)</summary>
+                <div className="stack">
+                  <MoodPicker
+                    mood={mood}
+                    energy={energy}
+                    note={note}
+                    onMoodChange={setMood}
+                    onEnergyChange={setEnergy}
+                    onNoteChange={setNote}
+                    disabled={finish.isPending}
+                  />
+                </div>
+              </details>
+
               <div className="notice__actions">
                 <button
                   type="button"
                   className="button button--primary"
                   disabled={finish.isPending}
-                  onClick={() => finish.mutate({ id: fast.id, metGoal })}
+                  onClick={() =>
+                    finish.mutate({
+                      id: fast.id,
+                      metGoal,
+                      mood,
+                      energy,
+                      note: note.trim() === '' ? null : note.trim(),
+                    })
+                  }
                 >
                   {finish.isPending ? 'Ending…' : 'End fast'}
                 </button>
@@ -312,6 +347,15 @@ export default function Timer() {
             {stageAt(0).name} is where every fast begins. Fastr shows each stage as you reach it.
           </p>
         </div>
+      )}
+
+      {/* Water sits on this screen whether or not a fast is running: staying hydrated is not conditional. */}
+      {profile.data && (
+        <WaterTracker
+          timeZone={profile.data.timeZone}
+          unit={profile.data.volumeUnit}
+          goalMl={profile.data.waterGoalMl}
+        />
       )}
     </div>
   );
