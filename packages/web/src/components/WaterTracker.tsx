@@ -72,9 +72,14 @@ export function WaterTracker({
         technology, and the visible text carries it for everyone else, so nothing depends on the width of a
         bar being judged by eye.
       */}
+      {/*
+        Named as well as valued. A progressbar with aria-valuenow and no accessible name announces a number with no
+        indication of what it measures, which axe flags as serious and which is exactly how it sounds.
+      */}
       <div
         className="water__bar"
         role="progressbar"
+        aria-labelledby="water-heading"
         aria-valuemin={0}
         aria-valuemax={goalMl}
         aria-valuenow={total}

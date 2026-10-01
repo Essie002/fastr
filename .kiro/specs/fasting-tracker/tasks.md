@@ -365,14 +365,14 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write a test asserting the function ignores a user ID in the request body, and a database test asserting every user-owned row is gone after the auth user is deleted
   - _Requirements: 3.3, 3.4, 18.4_
 
-- [ ] 24. Add the safety notices
+- [x] 24. Add the safety notices
   - Show the extended-fast notice and require confirmation when selecting or starting a fast of 24 hours or more
   - Show a prominent prompt suggesting the user end an active fast once it passes 72 hours
   - Link stage descriptions to the health notice
   - Write tests for the confirmation being required at exactly 24 hours and not below it, and for the 72-hour prompt appearing
   - _Requirements: 6.5, 17.2, 17.3, 17.4_
 
-- [ ] 25. Accessibility pass
+- [x] 25. Accessibility pass
   - Make the visible ticking timer `aria-hidden` and add a polite live region announcing only stage changes and goal completion, with the full state available as text
   - Walk every screen by keyboard, fixing focus order and adding a visible focus indicator throughout
   - Ensure the ring, the calendar and the charts convey nothing by colour alone

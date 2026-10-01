@@ -7,6 +7,7 @@ import {
 } from '@fastr/shared';
 import type { Fast, TimeZone } from '@fastr/shared';
 import { ProgressRing } from './ProgressRing.js';
+import { StageDetails } from './StageDetails.js';
 
 /**
  * The running timer. Requirements 5.4, 5.7, 6.2.
@@ -74,6 +75,9 @@ export function TimerDisplay({
         ) : (
           <p className="muted timer__stage-next">This is the last stage Fastr tracks.</p>
         )}
+
+        {/* Requirements 6.4 and 6.5: the detail, and where these numbers come from. */}
+        <StageDetails currentKey={stage.key} />
       </div>
     </div>
   );
