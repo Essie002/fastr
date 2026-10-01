@@ -161,13 +161,21 @@ describe.skipIf(!hasStack())('Row Level Security', () => {
       expect(insertError).toBeNull();
       const id = (mine as { id: string }).id;
 
-      const { error } = await userA.from('fasts').update({ user_id: SEED_USERS.b.id }).eq('id', id);
+      await userA.from('fasts').update({ user_id: SEED_USERS.b.id }).eq('id', id);
 
-      expect(error, 'reassigning user_id must be refused').not.toBeNull();
-      expect(error?.code).toBe('42501');
-
+      /*
+       * The row is the assertion, not the error code.
+       *
+       * A refused update surfaces two ways: a `with check` violation (42501) when the row is visible to the caller, or
+       * plain success with zero rows matched when `using` filtered it out first. Which one happens depends on the data
+       * present, so asserting the code made this test pass or fail according to what other suites had left behind — it
+       * failed in a full run and passed in isolation. What must hold either way is that the row still belongs to its
+       * owner.
+       */
       const { data } = await service.from('fasts').select('user_id').eq('id', id).single();
-      expect((data as { user_id: string }).user_id).toBe(SEED_USERS.a.id);
+      expect((data as { user_id: string }).user_id, 'reassigning user_id must not succeed').toBe(
+        SEED_USERS.a.id,
+      );
     });
   });
 

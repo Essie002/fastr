@@ -381,7 +381,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Add the arithmetic contrast test over the light and dark token pairs against WCAG 2.1 AA, with `axe`'s own contrast rules disabled since jsdom does not paint
   - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5_
 
-- [ ] 26. Add the container definitions
+- [x] 26. Add the container definitions
   - Write a multi-stage `Dockerfile` building the web app and serving it with a small static server as a non-root user
   - Write `.dockerignore` excluding `node_modules`, `.git`, `.env` files and build output
   - Write `.devcontainer/devcontainer.json` with Node 22, the Supabase CLI and Docker-in-Docker, so the project opens ready to run in Kiro, VS Code or Codespaces

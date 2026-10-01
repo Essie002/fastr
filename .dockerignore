@@ -1,0 +1,39 @@
+# Requirement 20.6.
+#
+# Keeping these out is not only about image size. `node_modules` copied from a host can contain binaries built for a
+# different platform, which then shadow what `npm ci` installs and fail at runtime in ways that look like a code bug.
+
+node_modules
+**/node_modules
+
+dist
+**/dist
+coverage
+
+# Both patterns, and the second is the one that matters. A `.dockerignore` glob without `**/` matches only the context
+# root, so `*.tsbuildinfo` alone let `packages/shared/tsconfig.tsbuildinfo` through — and a stale build-info file tells
+# `tsc -b` the project is already built, so it emits nothing, while `dist/` is correctly excluded. The result is a
+# container build failing with TS6305 on every file that imports the shared package, caused by a file nobody thought
+# they had copied.
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+.git
+.gitignore
+.github
+
+# Secrets, and the machine-specific files `npm run setup` writes.
+.env
+.env.*
+!.env.example
+.docker-host
+supabase/functions/.env
+
+# Not needed to build the web app: the container serves static files and talks to a hosted Supabase.
+supabase
+.kiro
+.devcontainer
+.vscode
+README.md
+*.log
+.DS_Store

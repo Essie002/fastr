@@ -1,0 +1,44 @@
+# Running the built web app as a container. Requirement 20.5.
+#
+# This is not how Fastr is deployed. GitHub Pages serves the same build as static files, and the back end is a hosted
+# Supabase project either way. What this gives you is somewhere to run the front end that can set real HTTP headers —
+# `frame-ancestors` in particular, which a meta tag cannot carry.
+#
+# Works with Docker and with Podman: `podman compose up` needs no changes, and image names are fully qualified so
+# Podman does not have to guess a registry.
+#
+# The local *development* stack is a separate thing entirely: `npm run setup`, which runs Postgres, Auth, Realtime and
+# the Edge Functions through the Supabase CLI.
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Both are public by design — the anon key is protected by Row Level Security — and both are baked in at build
+        # time by Vite, so they are build arguments rather than runtime environment. Point them at a hosted project, or
+        # at the local stack's gateway as shown.
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-http://127.0.0.1:54321}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+    image: fastr-web:local
+    container_name: fastr-web
+    ports:
+      # 8080 inside, because the image runs as a non-root user and a port below 1024 would need privileges it does not
+      # have.
+      - '8080:8080'
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '--quiet',
+          '--tries=1',
+          '--spider',
+          'http://127.0.0.1:8080/fastr/index.html',
+        ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
