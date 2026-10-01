@@ -345,7 +345,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Verify end to end against the hosted project: a fast whose goal passes while the app is closed produces a notification on a phone
   - _Requirements: 7.3, 7.4, 7.5, 7.7, 7.8, 7.11, 18.4, 18.5_
 
-- [ ] 21. Build reminders
+- [x] 21. Build reminders
   - Build the reminder settings: a local time, the weekdays it applies to, and an enable toggle
   - Add the hourly cron job inserting reminder notifications, converting the local time through the profile's time zone, skipping users with an active fast, and skipping a day already queued
   - Write tests for the time-zone conversion across a daylight saving change, and for an active fast suppressing the reminder

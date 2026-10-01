@@ -12,6 +12,7 @@ import {
 import { useTheme } from '../theme/ThemeProvider.js';
 import { commonTimeZones } from '../time/zones.js';
 import { NotificationSettings } from '../pwa/NotificationSettings.js';
+import { Reminders } from '../components/Reminders.js';
 
 /**
  * Settings. Requirements 2.6, 2.7, 3.1, 3.2, 14.1.
@@ -160,6 +161,8 @@ export default function Settings() {
       </section>
 
       <NotificationSettings />
+
+      <Reminders timeZone={p.timeZone} />
 
       <ChangePassword onSave={setPassword} />
 
