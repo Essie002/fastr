@@ -27,6 +27,8 @@ export interface StubOptions {
   tables?: Record<string, unknown[]>;
   /** Tables whose writes should fail. */
   tableErrors?: Record<string, { message: string; code?: string }>;
+  /** What `subscribe` should report. `CHANNEL_ERROR` exercises the degraded path. */
+  realtimeStatus?: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
 }
 
 export function makeSession(overrides: Partial<Session> = {}): Session {
@@ -84,6 +86,8 @@ export interface Stub {
   };
   /** Query builders handed out per table. A runaway refetch loop shows up as a large number here. */
   reads: Map<string, number>;
+  /** Fires the realtime handler, as a change on another device would. */
+  emitRealtimeChange: () => void;
 }
 
 export function installSupabaseStub(options: StubOptions = {}): Stub {
@@ -98,6 +102,9 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
 
   /** How many query builders each table has handed out. A runaway refetch shows up here. */
   const reads = new Map<string, number>();
+
+  /** Realtime handlers by channel name, so a test can simulate a change arriving from another device. */
+  const channelHandlers = new Map<string, () => void>();
 
   const calls = {
     signInWithPassword: vi.fn(),
@@ -230,7 +237,25 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
       },
     },
     from: (table: string) => builder(table),
-    channel: () => ({ on: () => ({ subscribe: () => ({}) }), subscribe: () => ({}) }),
+
+    /**
+     * A realtime channel that records its handler so a test can fire a change, and reports whatever
+     * subscription state the test asked for.
+     */
+    channel: (name: string) => {
+      const channel = {
+        on: (_event: string, _filter: unknown, handler: () => void) => {
+          channelHandlers.set(name, handler);
+          return channel;
+        },
+        subscribe: (onState?: (state: string) => void) => {
+          onState?.(options.realtimeStatus ?? 'SUBSCRIBED');
+          return channel;
+        },
+        unsubscribe: () => channel,
+      };
+      return channel;
+    },
     removeChannel: () => {},
   } as unknown as SupabaseClient;
 
@@ -244,6 +269,10 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
     },
     calls,
     reads,
+    /** Fires the realtime handler, as a change on another device would. */
+    emitRealtimeChange: () => {
+      for (const handler of channelHandlers.values()) handler();
+    },
   };
 }
 

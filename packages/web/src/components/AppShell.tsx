@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useOnline } from '../hooks/useOnline.js';
 import { OfflineBanner } from './Banner.js';
+import { useAuth } from '../auth/AuthProvider.js';
+import { useRealtimeFasts } from '../data/useRealtimeFasts.js';
 
 /**
  * The frame every signed-in screen sits in. Requirement 15.1.
@@ -24,6 +26,11 @@ const TABS = [
 
 export function AppShell() {
   const online = useOnline();
+  const { userId } = useAuth();
+
+  // Subscribed once here rather than per screen, so navigating between tabs does not tear the channel down
+  // and build it again. Requirement 5.6.
+  const realtime = useRealtimeFasts(userId);
 
   return (
     <div className="shell">
@@ -55,6 +62,19 @@ export function AppShell() {
           leaves focus behind in the navigation. */}
       <main className="shell__main" id="main" tabIndex={-1}>
         {!online && <OfflineBanner />}
+
+        {/*
+          Only while online. Offline the banner above already explains it, and two messages about the same
+          thing reads like two separate faults. Worded as a limitation rather than a failure, because the app
+          still works: it just will not notice a change made elsewhere until this one is reopened.
+        */}
+        {online && realtime === 'down' && (
+          <p className="muted shell__realtime" role="status">
+            Live updates are unavailable. Changes made on another device will appear when you come
+            back to this one.
+          </p>
+        )}
+
         <Outlet />
       </main>
     </div>

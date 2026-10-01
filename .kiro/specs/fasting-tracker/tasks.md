@@ -283,7 +283,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for a timer that is correct after a remount, correct with a clock offset applied, and correct when the goal has passed
   - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.7, 5.8, 5.9, 5.10, 5.11, 6.2, 6.3, 6.4_
 
-- [ ] 14. Keep devices in step
+- [x] 14. Keep devices in step
   - Subscribe to `postgres_changes` on `fasts` filtered to the signed-in user, invalidating queries rather than applying payloads
   - Refetch on `visibilitychange` to visible and on network reconnect, implemented and tested as the primary path rather than as a fallback
   - Show a subtle indicator when the realtime channel is down, without implying the app is broken
