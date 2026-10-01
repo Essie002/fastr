@@ -20,6 +20,7 @@ import {
 } from '../data/fasts.js';
 import { useProfile } from '../data/useProfile.js';
 import { useTick } from '../hooks/useTick.js';
+import { useOnline } from '../hooks/useOnline.js';
 import { now } from '../time/clock.js';
 import { TimerDisplay } from '../components/TimerDisplay.js';
 import { ExtendedFastNotice } from '../components/ExtendedFastNotice.js';
@@ -42,6 +43,11 @@ export default function Timer() {
 
   // Only ticks while something is running. A screen with no fast has nothing to recompute.
   const time = useTick(active.data != null);
+
+  // Requirement 15.4. Writes are disabled offline rather than queued: a fast that silently starts when the
+  // network returns, hours later, with a start time from when the button was pressed, is worse than a button
+  // that says it cannot be used yet. The timer itself keeps running from the cached start.
+  const online = useOnline();
 
   const [error, setError] = useState<string | null>(null);
   const [confirmingExtended, setConfirmingExtended] = useState(false);
@@ -263,6 +269,7 @@ export default function Timer() {
               <button
                 type="button"
                 className="button button--primary"
+                disabled={!online}
                 onClick={() => setConfirmingEnd(true)}
               >
                 End fast
@@ -270,10 +277,17 @@ export default function Timer() {
               <button
                 type="button"
                 className="button button--link"
+                disabled={!online}
                 onClick={() => setConfirmingCancel(true)}
               >
                 Discard without recording
               </button>
+
+              {!online && (
+                <p className="field__hint">
+                  Your timer keeps running. Ending this fast needs a connection.
+                </p>
+              )}
             </div>
           )}
         </>
@@ -299,11 +313,17 @@ export default function Timer() {
                 <button
                   type="button"
                   className="button button--primary"
-                  disabled={!plan || begin.isPending}
+                  disabled={!plan || begin.isPending || !online}
                   onClick={requestStart}
                 >
                   {begin.isPending ? 'Starting…' : 'Start fast'}
                 </button>
+
+                {!online && (
+                  <p className="field__hint">
+                    Starting a fast needs a connection, so Fastr can record when it began.
+                  </p>
+                )}
 
                 {/* Requirement 5.3. The common case is "I stopped eating at 8pm and it is now morning". */}
                 {backdating ? (

@@ -314,7 +314,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for the local-day boundary, for undo, and for a note containing markup rendering as text
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 13.1, 13.2, 13.3_
 
-- [ ] 18. Build the PWA shell
+- [x] 18. Build the PWA shell
   - Add the manifest, the icon set, and the service worker registration
   - Implement network-first caching for the app shell and cache-first for hashed assets and icons, never caching Supabase requests
   - Implement the update flow: take over on activation and prompt for a reload rather than reloading during a fast

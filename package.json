@@ -2,7 +2,7 @@
   "name": "fastr",
   "version": "0.1.0",
   "private": true,
-  "description": "Fastr — intermittent fasting tracker. Pick a plan, start a fast, get told when it's done.",
+  "description": "Fastr \u2014 intermittent fasting tracker. Pick a plan, start a fast, get told when it's done.",
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -30,6 +30,7 @@
     "db:status": "node scripts/supabase.mjs status",
     "db:psql": "node scripts/psql.mjs",
     "gen:stages": "node --experimental-strip-types scripts/gen-stages.mjs",
+    "gen:icons": "node scripts/gen-icons.mjs",
     "check:rls": "node scripts/check-rls.mjs"
   },
   "devDependencies": {

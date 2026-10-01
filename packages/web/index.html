@@ -19,6 +19,14 @@
       content="Intermittent fasting tracker. Pick a plan, start a fast, get told when it's done."
     />
 
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <!-- iOS ignores the manifest's icons and looks for this one. -->
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" href="%BASE_URL%icons/icon-192.png" />
+    <!-- Lets the installed app use the full screen on iOS, below the status bar. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Fastr" />
+
     <!--
       The theme, applied before first paint. Requirement 14.2.
 

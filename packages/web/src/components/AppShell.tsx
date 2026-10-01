@@ -3,6 +3,8 @@ import { useOnline } from '../hooks/useOnline.js';
 import { OfflineBanner } from './Banner.js';
 import { useAuth } from '../auth/AuthProvider.js';
 import { useRealtimeFasts } from '../data/useRealtimeFasts.js';
+import { InstallPrompt } from '../pwa/InstallPrompt.js';
+import { UpdatePrompt } from '../pwa/UpdatePrompt.js';
 
 /**
  * The frame every signed-in screen sits in. Requirement 15.1.
@@ -61,6 +63,8 @@ export function AppShell() {
       {/* tabIndex -1 so the skip link can move focus here; without it the jump moves the viewport and
           leaves focus behind in the navigation. */}
       <main className="shell__main" id="main" tabIndex={-1}>
+        <UpdatePrompt />
+
         {!online && <OfflineBanner />}
 
         {/*
@@ -76,6 +80,10 @@ export function AppShell() {
         )}
 
         <Outlet />
+
+        {/* Below the content, not above it: the offer matters, but not more than the timer someone opened the
+            app to see. */}
+        <InstallPrompt />
       </main>
     </div>
   );
