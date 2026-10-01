@@ -388,7 +388,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Confirm `npm run setup` works inside the dev container
   - _Requirements: 20.4, 20.5, 20.6_
 
-- [ ] 27. Build the CI workflow
+- [x] 27. Build the CI workflow
   - Run on push and pull request, with a concurrency group cancelling superseded runs and `permissions: contents: read`
   - Install with `npm ci`, start local Supabase in the runner, and fail the run if it does not come up
   - Run `supabase db reset` so every migration is applied from scratch on every run
@@ -397,7 +397,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Build the web app and build the `Dockerfile`
   - _Requirements: 6.6, 18.3, 22.1, 22.2, 22.3, 22.4, 22.5_
 
-- [ ] 28. Build the deployment workflows
+- [x] 28. Build the deployment workflows
   - Write `deploy-pages.yml`: on push to `main` after CI passes, build with the Supabase URL and anon key from repository variables, and publish with `actions/deploy-pages` using only `pages: write` and `id-token: write`
   - Write `deploy-supabase.yml`: manual only, in a protected `production` environment, running `supabase db push` and `supabase functions deploy` with the access token from a secret
   - Write `keep-alive.yml`: every three days, one lightweight request to the Supabase REST endpoint

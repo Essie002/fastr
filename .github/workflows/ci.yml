@@ -1,0 +1,116 @@
+# CI. Requirement 22.
+#
+# The suite is only worth having if it cannot quietly shrink, so two things are deliberate here.
+#
+# **The database tests fail rather than skip.** Locally they skip with a warning when no stack is running, which is
+# right for someone without a container runtime. In CI that would be dangerous: a green run that silently skipped every
+# Row Level Security test is worse than no run at all, because it reports the security boundary as proven. So CI sets
+# FASTR_REQUIRE_DB=1 and a missing stack is a failure.
+#
+# **The migrations are applied from scratch on every run.** `supabase db reset` proves the migration history still
+# builds a working database from nothing, which is the property that breaks silently and is only discovered when it is
+# needed.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push makes the first run irrelevant. Cancelling keeps the queue honest.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Typecheck, lint, and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # `ci` rather than `install`, so the lockfile is authoritative and a dependency cannot drift between here and a
+      # laptop.
+      - name: Install
+        run: npm ci
+
+      # The runner has Docker, which is what the CLI wants. The local development story is Podman, for a machine where
+      # Docker Desktop is not permitted; both work, and nothing here depends on which.
+      - name: Start Supabase
+        run: npx supabase start
+
+      # Separate from `start`, because a stack that comes up and a migration history that applies cleanly are two
+      # different claims and a combined step hides which one failed.
+      - name: Apply every migration from scratch
+        run: npx supabase db reset
+
+      # Three generated artefacts share one source of truth: the stage list in packages/shared. If any has not been
+      # regenerated, this leaves the tree dirty and the build fails — which turns forgetting into a red build rather
+      # than a notification that silently never fires.
+      - name: Check the generated stage data is current
+        run: |
+          npm run gen:stages
+          git diff --exit-code -- supabase/migrations supabase/functions/_shared
+
+      # A new table without RLS is the single most likely way this app would leak one user's data to another, and it is
+      # silent: every query keeps working and the table is simply readable. Caught mechanically rather than by review.
+      - name: Check Row Level Security
+        run: npm run check:rls
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Test
+        env:
+          # The point of this variable: a skipped database suite is a failure here.
+          FASTR_REQUIRE_DB: '1'
+        run: npm test
+
+      - name: Build the web app
+        env:
+          # Placeholders. The deployed build gets the real values from repository variables; this step only has to prove
+          # the bundle compiles, and both are public anyway.
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-key
+        run: npm run build
+
+      # Requirement 22.4. The image is not how Fastr is deployed, so without this it would rot unnoticed — and it is
+      # also where the TS6305 and stale-tsbuildinfo problems would reappear, since only a clean build exposes them.
+      - name: Build the container image
+        run: docker build -t fastr-web:ci --build-arg VITE_SUPABASE_URL=http://127.0.0.1:54321 --build-arg VITE_SUPABASE_ANON_KEY=ci-placeholder-key .
+
+      - name: Check the image actually serves the app
+        run: |
+          docker run -d --name fastr-ci -p 8080:8080 fastr-web:ci
+          for attempt in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/fastr/ > /dev/null; then
+              echo "serving"
+              # A deep link must be a real 200 here, unlike on Pages where it is the 404.html fallback.
+              curl -fsS -o /dev/null http://127.0.0.1:8080/fastr/history
+              docker rm -f fastr-ci
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "the container never served the app"
+          docker logs fastr-ci
+          exit 1

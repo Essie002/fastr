@@ -1,0 +1,60 @@
+# Keeping the Supabase project from pausing. Requirement 21.7.
+#
+# A free Supabase project is paused after a week of inactivity, and a paused project serves nothing: no sign-in, and no
+# notifications until it is restored by hand. A lightweight request every few days counts as activity.
+#
+# Two honest limits, both of which belong in the README as well as here.
+#
+# GitHub disables scheduled workflows in a repository with no commits for 60 days, so this keeps the project alive only
+# while the repository itself is alive. It is a mitigation, not a guarantee.
+#
+# Whether the cron job that sends notifications already counts as activity is unconfirmed. If it does, this is
+# redundant. Both are cheap, so both are here.
+#
+# The guarantee costs $25 a month on Supabase Pro, and nothing in this project depends on free-plan behaviour, so that
+# upgrade is a dashboard click and no code change.
+
+name: Keep alive
+
+on:
+  schedule:
+    # Every three days, at a time nobody is deploying. Cron here is UTC.
+    - cron: '17 4 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Touch the Supabase project
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Ping
+        env:
+          # A repository variable rather than a secret: the anon key is public by design.
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are not set, so there is nothing to ping."
+            exit 0
+          fi
+
+          # A read against a table with Row Level Security and no matching rows for an anonymous caller: it exercises the
+          # API and the database without touching anybody's data. `fasting_stages` is reference data, so this is the one
+          # read that returns something and still reveals nothing.
+          status=$(curl -s -o /tmp/ping.txt -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/fasting_stages?select=key&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY")
+
+          echo "HTTP $status"
+
+          # 200 is awake. Anything else is worth failing on, because the whole point is to notice a paused project before
+          # the notifications stop.
+          if [ "$status" != "200" ]; then
+            cat /tmp/ping.txt
+            exit 1
+          fi
