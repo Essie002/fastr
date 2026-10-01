@@ -79,6 +79,8 @@ export interface Stub {
     updateUser: ReturnType<typeof vi.fn>;
     resetPasswordForEmail: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
   };
   /** Query builders handed out per table. A runaway refetch loop shows up as a large number here. */
   reads: Map<string, number>;
@@ -104,6 +106,8 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
     updateUser: vi.fn(),
     resetPasswordForEmail: vi.fn(),
     update: vi.fn(),
+    insert: vi.fn(),
+    delete: vi.fn(),
   };
 
   /**
@@ -116,8 +120,18 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
     const error = tableErrors[table] ?? null;
     let single = false;
 
+    /**
+     * Rows written during this chain.
+     *
+     * An insert followed by `.select().single()` has to come back as the inserted row, not as whatever the
+     * table was seeded with: the app reads the returned row to get its generated id, and handing back
+     * `null` crashes the mapper rather than failing the test with something informative.
+     */
+    let written: Record<string, unknown> | null = null;
+
     const result = () => {
       if (error) return { data: null, error };
+      if (written) return { data: written, error: null };
       if (single) return { data: rows[0] ?? null, error: null };
       return { data: rows, error: null };
     };
@@ -126,13 +140,29 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
       select: () => chain,
       eq: () => chain,
       neq: () => chain,
+      lt: () => chain,
+      gte: () => chain,
+      lte: () => chain,
       in: () => chain,
       order: () => chain,
       limit: () => chain,
-      insert: () => chain,
-      delete: () => chain,
-      update: (patch: unknown) => {
+      insert: (payload: Record<string, unknown>) => {
+        calls.insert(table, payload);
+        written = { id: `${table}-inserted`, ...payload };
+        return chain;
+      },
+      upsert: (payload: Record<string, unknown>) => {
+        calls.insert(table, payload);
+        written = { id: `${table}-upserted`, ...payload };
+        return chain;
+      },
+      delete: () => {
+        calls.delete(table);
+        return chain;
+      },
+      update: (patch: Record<string, unknown>) => {
         calls.update(table, patch);
+        written = { ...(rows[0] as Record<string, unknown> | undefined), ...patch };
         return chain;
       },
       single: () => {

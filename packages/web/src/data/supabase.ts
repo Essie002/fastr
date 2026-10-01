@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { readConfig } from '../config.js';
+import { clockTrackingFetch } from '../time/clock.js';
 
 /**
  * The Supabase client. One per document.
@@ -37,6 +38,10 @@ export function getSupabase(): SupabaseClient {
     },
     global: {
       headers: { 'x-fastr-client': 'web' },
+      // Every response carries a `Date` header, so the timer learns the server's clock from requests the
+      // app was making anyway. Requirement 5.5: a phone whose own clock is wrong still shows the right
+      // elapsed time.
+      fetch: clockTrackingFetch(),
     },
   });
 

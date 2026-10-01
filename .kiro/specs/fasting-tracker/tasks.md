@@ -271,7 +271,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for selection persisting, the custom range rejecting 0 and 73 hours, and the extended notice appearing on exactly the plans of 24 hours and over
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7_
 
-- [ ] 13. Build the timer screen
+- [x] 13. Build the timer screen
   - Write the `fasts` data module: the active fast, start, end, cancel, and edit
   - Measure the clock offset once per session from the `Date` header of the first Supabase response, and apply it everywhere elapsed time is computed
   - Build the timer: elapsed, remaining, goal end time in the user's zone, and a progress ring recomputed from `start_at` on a one-second interval, plus an immediate recompute on `visibilitychange`
