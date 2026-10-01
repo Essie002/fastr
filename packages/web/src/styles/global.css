@@ -653,3 +653,201 @@ select.field__input {
 .timer__backdate .field__input {
   width: 6rem;
 }
+
+/* --------------------------------------------------------------------------
+ * History
+ * -------------------------------------------------------------------------- */
+
+.segmented {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.segmented__option {
+  flex: 1;
+  min-height: var(--touch-target);
+  padding: var(--space-2);
+  background: none;
+  color: var(--text-muted);
+  border: none;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmented__option--on {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+.history {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.history__item {
+  display: grid;
+  grid-template: 'day duration' auto 'meta meta' auto / 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history__item:hover {
+  border-color: var(--accent);
+}
+
+.history__day {
+  grid-area: day;
+  font-weight: 600;
+}
+
+.history__duration {
+  grid-area: duration;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.history__meta {
+  grid-area: meta;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* --------------------------------------------------------------------------
+ * Calendar
+ * -------------------------------------------------------------------------- */
+
+.calendar {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.calendar__caption {
+  margin-bottom: var(--space-2);
+  font-weight: 700;
+}
+
+.calendar__head {
+  padding-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.calendar__cell {
+  position: relative;
+  height: 2.5rem;
+  text-align: center;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.calendar__cell--blank {
+  color: transparent;
+}
+
+/*
+ * Filled for a goal met, outlined for one ended early. Two different shapes, not two colours, so the
+ * distinction survives a monochrome screen and colour blindness. Requirement 19.3 — and each cell also
+ * states its status in text for a screen reader.
+ */
+.calendar__cell--met::before,
+.calendar__cell--short::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: var(--radius-full);
+  z-index: -1;
+}
+
+.calendar__cell--met::before {
+  background: var(--accent);
+}
+
+.calendar__cell--met {
+  color: var(--text-on-accent);
+  font-weight: 700;
+}
+
+.calendar__cell--short::before {
+  border: 2px solid var(--accent);
+}
+
+.calendar__cell--today {
+  outline: 2px dashed var(--text-muted);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
+
+.calendar__nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.calendar__key {
+  font-size: var(--text-sm);
+}
+
+/* --------------------------------------------------------------------------
+ * Mood and energy scales
+ * -------------------------------------------------------------------------- */
+
+.scale {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.scale__options {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.scale__end {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.scale__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: var(--touch-target);
+  min-height: var(--touch-target);
+  justify-content: center;
+  cursor: pointer;
+}
+
+.scale__option input {
+  accent-color: var(--accent);
+}
+
+textarea.field__input {
+  resize: vertical;
+}

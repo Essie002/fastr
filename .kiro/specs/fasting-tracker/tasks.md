@@ -290,7 +290,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for a remote insert causing a refetch, and for a focus event refetching with the channel closed
   - _Requirements: 5.6_
 
-- [ ] 15. Build history
+- [x] 15. Build history
   - Build the list: finished fasts newest first, with date, plan, duration, goal, whether the goal was met, and the recorded mood and energy
   - Add keyset pagination
   - Build the calendar view marking each day with a completed fast

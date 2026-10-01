@@ -88,6 +88,48 @@ export async function startFast(input: StartFastInput): Promise<Fast> {
   return toFast(data as FastRow);
 }
 
+export interface AddPastFastInput {
+  planId: string;
+  goalMinutes: number;
+  startAt: string;
+  endedAt: string;
+}
+
+/**
+ * Logs a fast that has already finished. Requirement 9.4.
+ *
+ * Inserted as a finished fast in one statement rather than started and then ended. Two reasons: the
+ * 48-hour backdating limit applies to *starting* a fast, so the two-step version would refuse anything older
+ * than two days, and an insert that is `active` for a moment would trip the one-active-fast rule for anyone
+ * with a fast already running.
+ */
+export async function addPastFast(input: AddPastFastInput): Promise<Fast> {
+  const { data: user } = await getSupabase().auth.getUser();
+  if (!user.user) throw new Error('Not signed in.');
+
+  const actualMinutes = minutesOf(input.startAt, input.endedAt);
+
+  const { data, error } = await getSupabase()
+    .from('fasts')
+    .insert({
+      user_id: user.user.id,
+      plan_id: input.planId,
+      goal_minutes: input.goalMinutes,
+      start_at: input.startAt,
+      ended_at: input.endedAt,
+      status: actualMinutes >= input.goalMinutes ? 'completed' : 'ended_early',
+    })
+    .select(COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return toFast(data as FastRow);
+}
+
+function minutesOf(startAt: string, endedAt: string): number {
+  return (Date.parse(endedAt) - Date.parse(startAt)) / 60_000;
+}
+
 export interface EndFastInput {
   id: string;
   /** Whether the goal was reached. Decided by the caller from the elapsed time it is showing. */
@@ -160,7 +202,9 @@ export async function editFast(input: EditFastInput): Promise<Fast> {
 
 /** Finished fasts, newest first. Keyset pagination, so a long history stays fast. */
 export async function fetchFastHistory(
-  options: { before?: string; limit?: number } = {},
+  // `| undefined` spelled out because `exactOptionalPropertyTypes` is on, and the cursor is genuinely absent
+  // on the first page rather than merely unspecified.
+  options: { before?: string | undefined; limit?: number | undefined } = {},
 ): Promise<CompletedFast[]> {
   let query = getSupabase()
     .from('fasts')
