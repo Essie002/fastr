@@ -404,7 +404,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Verify the deployed app end to end on a phone and a laptop: sign in, start a fast, and see it on the other device
   - _Requirements: 21.1, 21.2, 21.3, 21.4, 22.5_
 
-- [ ] 29. Write the README
+- [x] 29. Write the README
   - Follow Rally's structure: what Fastr is, running it locally, environment variables, layout, working on it, deployment, cost and limits, accessibility and what the tests do not cover, and where the design lives
   - Give copy-paste commands for first-time setup, development, tests, inviting a user, generating VAPID keys, and both deploys
   - Document every environment variable and secret with where it lives, its default and its purpose, in a table
