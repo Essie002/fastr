@@ -18,13 +18,15 @@
  *   npm run gen:stages
  */
 
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { STAGES } from '../packages/shared/src/stages.ts';
+import { PLANS } from '../packages/shared/src/plans.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const target = join(root, 'supabase', 'migrations', '20260930140000_fasting_stages.sql');
+const denoDir = join(root, 'supabase', 'functions', '_shared');
 
 /** Postgres string literal. Doubling the quote is the only escape needed here. */
 const sql = (value) => `'${String(value).replace(/'/g, "''")}'`;
@@ -72,4 +74,59 @@ ${rows};
 writeFileSync(target, contents);
 console.log(
   `Wrote ${STAGES.length} stages to supabase/migrations/20260930140000_fasting_stages.sql`,
+);
+
+/*
+ * The same two lists again, as Deno modules for the Edge Functions.
+ *
+ * The functions compose notification text from the stage and plan data, and they cannot import from
+ * `packages/shared`: `supabase functions deploy` bundles each function's own directory, so a relative import
+ * climbing out of `supabase/` does not travel with it.
+ *
+ * That makes three copies of one fact, and three places it could drift. One drift check covers all of them: CI
+ * regenerates and fails if anything changed.
+ */
+mkdirSync(denoDir, { recursive: true });
+
+const header = (what) => `// GENERATED FILE — do not edit by hand.
+//
+// Written by \`npm run gen:stages\` from packages/shared/src/${what}.ts, which is the source of truth. Edge
+// Functions cannot import from packages/shared, because \`functions deploy\` bundles only the function's own
+// directory. CI regenerates this and fails if it differs.
+`;
+
+writeFileSync(
+  join(denoDir, 'stages.ts'),
+  `${header('stages')}
+export interface FastingStage {
+  key: string;
+  atMinutes: number;
+  name: string;
+  description: string;
+}
+
+export const STAGES: readonly FastingStage[] = ${JSON.stringify(STAGES, null, 2)};
+`,
+);
+
+writeFileSync(
+  join(denoDir, 'plans.ts'),
+  `${header('plans')}
+export interface FastingPlan {
+  id: string;
+  label: string;
+  fastMinutes: number;
+  eatMinutes: number;
+  difficulty: string;
+  description: string;
+  extended: boolean;
+  custom: boolean;
+}
+
+export const PLANS: readonly FastingPlan[] = ${JSON.stringify(PLANS, null, 2)};
+`,
+);
+
+console.log(
+  `Wrote ${STAGES.length} stages and ${PLANS.length} plans to supabase/functions/_shared/`,
 );

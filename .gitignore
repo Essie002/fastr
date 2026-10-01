@@ -20,4 +20,7 @@ supabase/.temp/
 # so it is generated rather than committed.
 .docker-host
 
+# Local Edge Function secrets, written by `npm run setup`. The committed file is `.env.example`.
+supabase/functions/.env
+
 .DS_Store

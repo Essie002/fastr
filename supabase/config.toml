@@ -404,6 +404,15 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# Requirement 18.5. The sender is called by pg_cron, which has no user and therefore no JWT, so the gateway must
+# not demand one — it answers 401 before the function runs otherwise. Authentication is a shared secret in the
+# x-fastr-cron-secret header instead, checked as the function's first action.
+#
+# This is the only function with JWT verification off. delete-account and import-data both act on behalf of a
+# signed-in user and verify the token.
+[functions.send-notifications]
+verify_jwt = false
+
 # Off locally, for two reasons.
 #
 # The practical one: the analytics stack runs a log collector that bind-mounts the container runtime's

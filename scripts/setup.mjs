@@ -22,6 +22,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
+import { createECDH } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -118,6 +119,34 @@ if (!daemonReachable() && !usePodman()) {
 
 if (env.DOCKER_HOST) {
   console.log(`Using the Podman socket at ${env.DOCKER_HOST}`);
+}
+
+/*
+ * Local Edge Function secrets, before the stack starts so the runtime picks them up.
+ *
+ * Written rather than committed, and written rather than left to the contributor: without a CRON_SECRET the
+ * sender can only ever answer 403 locally, which looks exactly like a bug in the function.
+ *
+ * The VAPID pair is generated fresh per machine. It is never used to reach a real push service from here, so it
+ * only has to be well-formed.
+ */
+const functionsEnv = join(root, 'supabase', 'functions', '.env');
+if (!existsSync(functionsEnv)) {
+  const curve = createECDH('prime256v1');
+  curve.generateKeys();
+
+  writeFileSync(
+    functionsEnv,
+    [
+      '# Written by `npm run setup`. Local development only, not committed.',
+      'CRON_SECRET=local-cron-secret',
+      `VAPID_PUBLIC_KEY=${curve.getPublicKey().toString('base64url')}`,
+      `VAPID_PRIVATE_KEY=${curve.getPrivateKey('buffer').subarray(-32).toString('base64url')}`,
+      'VAPID_SUBJECT=mailto:local@fastr.test',
+      '',
+    ].join('\n'),
+  );
+  console.log('Wrote supabase/functions/.env with local-only secrets.');
 }
 
 console.log('\nStarting local Supabase. The first run pulls a dozen images, so give it a while.');

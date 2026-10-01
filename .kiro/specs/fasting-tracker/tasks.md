@@ -334,7 +334,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for permission being requested only on the tap, for the iOS branch, and for the denied state
   - _Requirements: 7.1, 7.2, 7.9, 7.10, 7.12, 7.13, 15.2_
 
-- [ ] 20. Build the notification sender and schedule it
+- [x] 20. Build the notification sender and schedule it
   - Write the `send-notifications` Edge Function: reject any request without the correct cron secret, then claim due rows with a single `update ... where id in (select ... for update skip locked)` statement, marking them sent before attempting delivery
   - Mark anything more than 30 minutes overdue as skipped instead of sending it
   - Compose each message from the shared plan and stage data, imported from `packages/shared`
