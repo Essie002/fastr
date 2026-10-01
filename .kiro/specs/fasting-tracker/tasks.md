@@ -323,7 +323,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for the offline state disabling mutations and keeping the timer running
   - _Requirements: 15.2, 15.3, 15.4_
 
-- [ ] 19. Build push subscription
+- [x] 19. Build push subscription
   - Write `scripts/gen-vapid.mjs` generating a VAPID key pair and printing where each half belongs
   - Build the "Turn on notifications" control, requesting permission only on that tap and never on load, then storing the subscription
   - Detect iPhone in a Safari tab and show the add-to-home-screen instructions in place of the permission button

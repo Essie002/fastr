@@ -212,7 +212,8 @@ describe('ending a fast (Req 5.8)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'End fast' }));
 
-    expect(await screen.findByRole('alertdialog')).toHaveTextContent(/end this fast/i);
+    // Named, because the goal alert is also an alertdialog on a fast that has passed its goal.
+    expect(await screen.findByRole('alertdialog', { name: /end this fast/i })).toBeInTheDocument();
     expect(stub.calls.update).not.toHaveBeenCalled();
   });
 

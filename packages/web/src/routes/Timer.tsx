@@ -27,6 +27,7 @@ import { ExtendedFastNotice } from '../components/ExtendedFastNotice.js';
 import { StageAnnouncer } from '../components/StageAnnouncer.js';
 import { MoodPicker } from '../components/MoodPicker.js';
 import { WaterTracker } from '../components/WaterTracker.js';
+import { GoalAlert } from '../components/GoalAlert.js';
 
 /**
  * The home screen. Requirements 5 and 6.
@@ -168,6 +169,15 @@ export default function Timer() {
       {fast ? (
         <>
           <StageAnnouncer elapsedMinutes={elapsedMinutes} goalMinutes={fast.goalMinutes} />
+
+          {/* Requirement 7.10. A browser will not show a push notification for a focused page, so without this
+              someone watching the timer reach its goal would see nothing happen. */}
+          <GoalAlert
+            fastId={fast.id}
+            reachedGoal={metGoal}
+            elapsedMinutes={elapsedMinutes}
+            sound={profile.data?.notifyGoal ?? true}
+          />
 
           <TimerDisplay
             fast={fast}

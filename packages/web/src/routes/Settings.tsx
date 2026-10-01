@@ -11,6 +11,7 @@ import {
 } from '../components/PasswordFields.js';
 import { useTheme } from '../theme/ThemeProvider.js';
 import { commonTimeZones } from '../time/zones.js';
+import { NotificationSettings } from '../pwa/NotificationSettings.js';
 
 /**
  * Settings. Requirements 2.6, 2.7, 3.1, 3.2, 14.1.
@@ -136,8 +137,8 @@ export default function Settings() {
       <section className="card stack" aria-labelledby="settings-notifications">
         <h2 id="settings-notifications">Notifications</h2>
         <p className="field__hint">
-          Turning these on decides what gets queued. Letting this device receive them is set up in
-          task 19.
+          These decide what Fastr queues for your account. Whether this device may show them is
+          below.
         </p>
 
         <ToggleField
@@ -157,6 +158,8 @@ export default function Settings() {
           onChange={(notify_stages) => save.mutate({ notify_stages })}
         />
       </section>
+
+      <NotificationSettings />
 
       <ChangePassword onSave={setPassword} />
 
