@@ -277,6 +277,19 @@ p {
   margin-top: var(--space-4);
 }
 
+/*
+ * A button placed directly in a stack becomes block-level.
+ *
+ * `.button` is `inline-flex`, which is right for one sitting inside a sentence. But two of them as siblings in a stack
+ * then share a line — and `margin-top` does nothing to an inline-level box — so "Start fast" and "I started earlier"
+ * sat on top of each other with the text running off the card. `fit-content` keeps the button its natural width rather
+ * than stretching it across the row.
+ */
+.stack > .button {
+  display: flex;
+  width: fit-content;
+}
+
 .fatal {
   max-width: 34rem;
   margin: var(--space-8) auto;
@@ -660,6 +673,9 @@ select.field__input {
 
 .segmented {
   display: flex;
+  /* Wraps rather than squeezing. With four options on a 390px phone, equal flex basis cut "30 days" down to "30" and
+     ran the labels into each other; two rows is less tidy than one and far more legible. */
+  flex-wrap: wrap;
   gap: var(--space-1);
   padding: var(--space-1);
   background: var(--surface-sunken);
@@ -667,7 +683,9 @@ select.field__input {
 }
 
 .segmented__option {
-  flex: 1;
+  /* Grow to share the row, but never shrink below the label's own width. */
+  flex: 1 1 auto;
+  white-space: nowrap;
   min-height: var(--touch-target);
   padding: var(--space-2);
   background: none;
