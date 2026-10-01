@@ -351,7 +351,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for the time-zone conversion across a daylight saving change, and for an active fast suppressing the reminder
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 22. Build export and import
+- [x] 22. Build export and import
   - Build the JSON export in the browser from the user's own rows, covering fasts, notes, weight, water, reminders, plan and settings, and excluding auth data and push subscriptions
   - Build the CSV export of fasts
   - Write the `import-data` Edge Function: verify the JWT, validate the whole payload against the shared schemas, refuse to run if the account already has fasts, and insert inside a transaction so a constraint violation rolls everything back
@@ -359,7 +359,7 @@ Execution waves. Every task in a wave can proceed in parallel once the previous 
   - Write tests for a round trip through export and import producing identical data, and for a payload with overlapping fasts importing nothing at all
   - _Requirements: 16.1, 16.2, 16.3_
 
-- [ ] 23. Build account deletion
+- [x] 23. Build account deletion
   - Write the `delete-account` Edge Function: verify the JWT, take the user ID from the verified token and never from the body, and call `auth.admin.deleteUser`
   - Build the settings flow requiring the user to type a confirmation phrase, then signing them out
   - Write a test asserting the function ignores a user ID in the request body, and a database test asserting every user-owned row is gone after the auth user is deleted

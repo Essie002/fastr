@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeProvider.js';
 import { commonTimeZones } from '../time/zones.js';
 import { NotificationSettings } from '../pwa/NotificationSettings.js';
 import { Reminders } from '../components/Reminders.js';
+import { DataSettings } from '../components/DataSettings.js';
 
 /**
  * Settings. Requirements 2.6, 2.7, 3.1, 3.2, 14.1.
@@ -173,6 +174,8 @@ export default function Settings() {
         </p>
         <SessionButtons signOut={signOut} signOutOtherDevices={signOutOtherDevices} />
       </section>
+
+      <DataSettings />
 
       <section className="card stack" aria-labelledby="settings-health">
         <h2 id="settings-health">Health notice</h2>

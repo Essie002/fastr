@@ -29,6 +29,8 @@ export interface StubOptions {
   tableErrors?: Record<string, { message: string; code?: string }>;
   /** What `subscribe` should report. `CHANNEL_ERROR` exercises the degraded path. */
   realtimeStatus?: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED';
+  /** Edge Functions that should fail, by name, with the message to return. */
+  functionErrors?: Record<string, string>;
 }
 
 export function makeSession(overrides: Partial<Session> = {}): Session {
@@ -83,6 +85,7 @@ export interface Stub {
     update: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     delete: ReturnType<typeof vi.fn>;
+    invoke: ReturnType<typeof vi.fn>;
   };
   /** Query builders handed out per table. A runaway refetch loop shows up as a large number here. */
   reads: Map<string, number>;
@@ -96,6 +99,8 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
   const authErrors = options.authErrors ?? {};
   const tables = options.tables ?? {};
   const tableErrors = options.tableErrors ?? {};
+  // Captured here because `invoke` has its own `options` parameter, and the inner one shadows this.
+  const functionErrors = options.functionErrors ?? {};
 
   const fail = (key: keyof NonNullable<StubOptions['authErrors']>) =>
     authErrors[key] ? { error: authErrors[key] } : null;
@@ -115,6 +120,7 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
     update: vi.fn(),
     insert: vi.fn(),
     delete: vi.fn(),
+    invoke: vi.fn(),
   };
 
   /**
@@ -237,6 +243,16 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
       },
     },
     from: (table: string) => builder(table),
+
+    /** Edge Functions. Records the call so a test can assert what was sent and what was not. */
+    functions: {
+      invoke: async (name: string, invokeOptions?: { body?: unknown }) => {
+        calls.invoke(name, invokeOptions?.body);
+        const failure = functionErrors[name];
+        if (failure) return { data: null, error: { message: failure } };
+        return { data: { ok: true }, error: null };
+      },
+    },
 
     /**
      * A realtime channel that records its handler so a test can fire a change, and reports whatever
