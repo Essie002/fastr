@@ -265,6 +265,134 @@ describe.skipIf(!hasStack())('Row Level Security', () => {
       expect((after as { status: string }).status).toBe('pending');
     });
   });
+
+  /**
+   * `activity_schedules` on its own, because it cannot be in the generic suite above: a schedule needs a
+   * parent activity, so there is no minimal standalone row for `sampleRow` to return.
+   *
+   * It also has something no other table has — a denormalised `user_id` that RLS trusts and a trigger owns.
+   * That combination is worth testing directly: if a client could set that column, it could file a schedule
+   * under someone else's id, and the row would then be invisible to its real owner while queueing
+   * notifications attributed to a stranger.
+   */
+  describe('activity_schedules', () => {
+    /** An activity owned by the given client, returning its id. */
+    async function activityFor(client: SupabaseClient): Promise<string> {
+      const { data, error } = await client
+        .from('activities')
+        .insert({
+          user_id: (await client.auth.getUser()).data.user!.id,
+          type_key: 'swim',
+          duration_minutes: 45,
+        })
+        .select('id')
+        .single();
+      expect(error).toBeNull();
+      return (data as { id: string }).id;
+    }
+
+    it('lets a user create a schedule on their own activity', async () => {
+      const activity = await activityFor(userA);
+      const { error } = await userA.from('activity_schedules').insert({
+        activity_id: activity,
+        kind: 'at',
+        local_time: '07:00',
+        weekdays: [1],
+      });
+      expect(error).toBeNull();
+    });
+
+    it('refuses a schedule on someone else\u2019s activity', async () => {
+      const activityOfA = await activityFor(userA);
+
+      const { error } = await userB.from('activity_schedules').insert({
+        activity_id: activityOfA,
+        kind: 'at',
+        local_time: '07:00',
+        weekdays: [1],
+      });
+
+      // The insert policy checks ownership of the parent, so this is refused rather than silently
+      // creating a schedule B can see on an activity B does not own.
+      expect(error).not.toBeNull();
+    });
+
+    it('ignores a forged user_id, taking the owner from the parent activity', async () => {
+      const activityOfA = await activityFor(userA);
+      const bId = (await userB.auth.getUser()).data.user!.id;
+
+      const { data, error } = await userA
+        .from('activity_schedules')
+        .insert({
+          activity_id: activityOfA,
+          user_id: bId, // the forgery
+          kind: 'at',
+          local_time: '07:00',
+          weekdays: [1],
+        })
+        .select('id, user_id')
+        .single();
+
+      expect(error).toBeNull();
+      // The trigger overwrote it. Without that, this row would belong to B as far as every policy and the
+      // scheduling function are concerned.
+      expect((data as { user_id: string }).user_id).not.toBe(bId);
+
+      const { data: visibleToB } = await userB
+        .from('activity_schedules')
+        .select('id')
+        .eq('id', (data as { id: string }).id);
+      expect(visibleToB).toHaveLength(0);
+    });
+
+    it('hides one user\u2019s schedules from another', async () => {
+      const activity = await activityFor(userA);
+      await userA
+        .from('activity_schedules')
+        .insert({ activity_id: activity, kind: 'at', local_time: '07:00', weekdays: [1] });
+
+      const { data } = await userB.from('activity_schedules').select('id');
+      expect(data).toHaveLength(0);
+    });
+
+    it('refuses to delete another user\u2019s schedule', async () => {
+      const activity = await activityFor(userA);
+      const { data: created } = await userA
+        .from('activity_schedules')
+        .insert({ activity_id: activity, kind: 'at', local_time: '07:00', weekdays: [1] })
+        .select('id')
+        .single();
+      const id = (created as { id: string }).id;
+
+      // No error: a delete matching no visible row is a no-op, which is how RLS reads. What matters is
+      // that the row survives.
+      await userB.from('activity_schedules').delete().eq('id', id);
+
+      const { data: still } = await service.from('activity_schedules').select('id').eq('id', id);
+      expect(still).toHaveLength(1);
+    });
+  });
+
+  describe('activity_types is reference data', () => {
+    it('is readable by any signed-in user', async () => {
+      // Requirement 11.6. Like fasting_stages: it describes nobody, and the same rows ship in the bundle.
+      const { data, error } = await userB.from('activity_types').select('key');
+      expect(error).toBeNull();
+      expect((data ?? []).length).toBeGreaterThan(0);
+    });
+
+    it('cannot be written by a client', async () => {
+      const { error } = await userA.from('activity_types').insert({
+        key: 'forged',
+        label: 'Forged',
+        icon: 'x',
+        default_minutes: 5,
+        unit: 'minutes',
+        sort_order: 99,
+      });
+      expect(error).not.toBeNull();
+    });
+  });
 });
 
 /** A harmless change per table, used to prove an update by the wrong user does nothing. */
@@ -284,5 +412,9 @@ function mutationFor(table: UserTable): Record<string, unknown> {
       return { enabled: false };
     case 'notifications':
       return { status: 'sent' };
+    case 'activities':
+      return { duration_minutes: 999 };
+    case 'activity_log':
+      return { label: 'tampered' };
   }
 }

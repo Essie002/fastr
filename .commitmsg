@@ -1,56 +1,60 @@
-feat: activity tables, and unblock the notification queue
+feat: derive, queue and cancel activity occurrences
 
-Tasks 2, 3, 4 and 8 of the activity-reminders spec. The schema half, plus
-the sender, which came forward because task 4's parity test demands it.
+Tasks 5, 6, 7 and 10. The scheduling half, proved against real Postgres.
 
-Three tables. The activity/schedule split is load-bearing: there are two
-schedule shapes — a wall-clock time on weekdays, and an interval inside a
-daily window — and hanging both shapes' columns off `activities` would
-leave half of them null on every row and make the CHECK constraint
-unreadable. Separate, each shape is required-or-forbidden in one
-expression. It also means one activity can own several schedules, so
-"swim Tuesday 07:00 and Saturday 09:00" is one activity.
+`activity_occurrences(from, to, as_of)` reduces both schedule shapes to a
+set of instants and writes nothing. Keeping it separate from the queueing
+function is the most useful decision here: it means a test can ask what a
+schedule produces on a given day in a given zone without anything being
+queued, claimed or delivered.
 
-activity_log is separate because it outlives the schedule: deleting an
-activity is a statement about the reminder, not a claim that the swim
-never happened. So `on delete set null`, and the label is snapshotted —
-joining for it would mean renaming an activity retitles history
-retroactively.
+The `as_of` parameter exists for exactly one reason — the daylight-saving
+case. Without it the choices are mocking Postgres's clock or
+reimplementing the schedule arithmetic in the test, and the second only
+proves two implementations agree with each other. With it, the test asks
+the real function what a 09:00 London schedule produces either side of
+the 2026-03-29 transition and asserts one occurrence each day, 09:00 on
+the wall clock both times, and 09:00 UTC before against 08:00 UTC after.
+That last pair is what proves a conversion happened rather than a
+wall-clock string being stored and handed back.
 
-Three blockers removed from `notifications`, each deliberately:
+Three local days are generated per schedule, not one. A window the user
+thinks of as "today" can straddle `from_at` in UTC, and 00:15 local is a
+different UTC date from the same user's 23:45. Generating yesterday,
+today and tomorrow and filtering by the requested range is the simple way
+to be right at every offset.
 
-- `reminder_has_no_fast` said any kind other than 'reminder' MUST have a
-  fast_id. True when written, a closed-world assumption, and it rejected
-  every activity notification outright. Replaced with a per-kind
-  constraint that states the same intent without assuming the set of
-  kinds is finished.
-- `notifications_unique_per_fast` is `where fast_id is not null`, so it
-  cannot see activity rows. A parallel partial index now covers them,
-  which is what lets the scheduler be a plain `on conflict do nothing`
-  despite running every 15 minutes with a 20-minute lookahead.
-- The old dedupe was "one reminder per user per local day", which would
-  have collapsed four activities a day into one notification. The index
-  replaces it.
+`queue_due_activities()` runs every 15 minutes with a five-minute
+look-back and a twenty-minute lookahead, so consecutive runs see the same
+occurrence deliberately. That is only safe because
+notifications_unique_per_occurrence makes the insert idempotent — the
+guarantee is in the schema, so rewriting this function cannot lose it. A
+test calls it four times and asserts the row count does not grow.
 
-Task 4 is the test I most wanted: notification kinds are written three
-times — the SQL CHECK, the shared union, and the Edge Function's own
-union, which cannot import the shared package — and nothing checked they
-agree. Both drifts fail silently. A kind missing from SQL is an insert
-that fails inside a security-definer function, logged where nobody
-looks. A kind missing from the Edge Function fell off the end of
-`compose`, which had no default, returned undefined, and delivered a
-push with no title and no body. The test parses all three; `compose` now
-has a `never` guard so a missing branch is a build error.
+Cancellation mirrors sync_fast_notifications: when the thing a
+notification describes changes, the pending queue is wrong and is
+cancelled, not corrected. Requeueing is left to the next run rather than
+done in the trigger, because recomputing occurrences there would put the
+schedule arithmetic in a second place. Triggers are scoped to the columns
+that move the time, so renaming a custom activity does not drop a
+reminder due in the next quarter hour. A time-zone change cancels that
+user's pending rows, which is what stops someone who flies to London
+getting yesterday's queue at the wrong local time.
 
-Also fixes a pre-existing bug found while reading the sender: the
-`sent_at` update applied to every claimed row, including the stale ones
-it had just marked `skipped` two statements earlier. Those rows claimed
-both that they were skipped and that they were sent at a specific time,
-which is the single question sent_at exists to answer.
+One thing the tests caught immediately: the queue function returned 11
+where the test expected 1, because `resetUserData` did not know about the
+new tables and rows accumulated between cases. Cleanup now has its own
+ordered list, separate from USER_TABLES, because it must include
+activity_schedules — which cannot be in the generic RLS suite at all,
+since a schedule needs a parent activity and there is no minimal
+standalone row for it.
 
-Water gets its own notification copy, because "45 minutes" is nonsense
-for a volume, and its own deep link to the timer screen where the water
-logger lives.
+So activity_schedules gets its own RLS cases, and they cover the one
+thing no other table needs: it has a denormalised user_id that RLS trusts
+and a trigger owns. A test inserts a forged user_id and asserts the
+trigger overwrote it, then that the row is invisible to the user it was
+forged onto. Without that trigger a client could file a schedule under a
+stranger's id, invisible to its real owner, queueing notifications
+attributed to someone else.
 
-Verified: db reset clean, check:rls passes across 13 tables, and all 144
-existing database tests pass unchanged.
+189 database tests pass.

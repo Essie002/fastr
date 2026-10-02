@@ -161,7 +161,14 @@ export function serviceClient(stack: LocalStack): SupabaseClient {
   });
 }
 
-/** Every table holding user data, with the column naming its owner. Drives the RLS suite. */
+/**
+ * Every table holding user data whose rows can stand alone. Drives the generic RLS suite.
+ *
+ * `activity_schedules` is deliberately absent: it requires a parent activity, so there is no such thing as a
+ * minimal standalone row for it, and `sampleRow` below cannot invent one. Its policies are proved by their own
+ * cases in `rls.test.ts`, which can create the parent first — including the one thing the generic suite could
+ * not check anyway, that a client cannot forge `user_id` on a schedule.
+ */
 export const USER_TABLES = [
   'fasts',
   'weight_entries',
@@ -170,6 +177,27 @@ export const USER_TABLES = [
   'push_subscriptions',
   'reminders',
   'notifications',
+  'activities',
+  'activity_log',
+] as const;
+
+/**
+ * Everything `resetUserData` clears, in an order that respects the foreign keys.
+ *
+ * Separate from `USER_TABLES` because it must include `activity_schedules`, which the generic RLS suite
+ * cannot handle. Leaving it out is how a suite starts seeing rows planted by the test before it — the
+ * symptom being a queue function that returns 11 when the test expects 1.
+ */
+const TABLES_TO_CLEAR = [
+  // Children first. The cascades would cope, but an explicit order means adding a table later is a visible
+  // decision rather than a silent reliance on `on delete cascade`.
+  'notifications',
+  'activity_log',
+  'activity_schedules',
+  'activities',
+  ...USER_TABLES.filter(
+    (table) => table !== 'notifications' && table !== 'activities' && table !== 'activity_log',
+  ),
 ] as const;
 
 export type UserTable = (typeof USER_TABLES)[number];
@@ -211,6 +239,12 @@ export function sampleRow(table: UserTable, userId: string, seed: number): Recor
       };
     case 'reminders':
       return { user_id: userId, local_time: '20:00', weekdays: [1, 2, 3], enabled: true };
+    case 'activities':
+      return { user_id: userId, type_key: 'walk', duration_minutes: 20 };
+    case 'activity_log':
+      // `activity_id` left null, which the schema allows: a completion outlives the activity that
+      // prompted it, so a row with no parent is a real state rather than a convenience for this test.
+      return { user_id: userId, label: 'Walk', type_key: 'walk', occurred_at: iso(0), minutes: 20 };
     case 'notifications':
       // No fast_id: the reminder kind is the one shape that needs no parent row, which keeps this
       // fixture independent of the overlap constraint.
@@ -229,9 +263,7 @@ export function sampleRow(table: UserTable, userId: string, seed: number): Recor
 export async function resetUserData(stack: LocalStack): Promise<void> {
   const service = serviceClient(stack);
   const ids = [SEED_USERS.a.id, SEED_USERS.b.id];
-  // notifications before fasts: the cascade would handle it, but being explicit keeps the order
-  // obvious if a table is added later.
-  for (const table of ['notifications', ...USER_TABLES.filter((t) => t !== 'notifications')]) {
+  for (const table of TABLES_TO_CLEAR) {
     await service.from(table).delete().in('user_id', ids);
   }
 }

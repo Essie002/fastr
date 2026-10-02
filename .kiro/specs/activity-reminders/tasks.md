@@ -39,14 +39,14 @@ work drifting.
   - This test should fail right now against the Edge Function; fixing it is task 8
   - _Requirements: 12.2_
 
-- [ ] 5. Derive occurrences in SQL
+- [x] 5. Derive occurrences in SQL
   - Add `activity_occurrences(from_at, to_at)` as designed, `stable security definer`, service-role execute only
   - Tests against real Postgres: an `at` schedule on matching and non-matching weekdays; an `every` schedule producing
     the expected count; the last occurrence never past `window_end`; two users in different zones from one call
   - A daylight-saving test asserting no occurrence is duplicated or skipped across a transition
   - _Requirements: 2.1, 2.2, 2.4, 3.3, 3.5, 8.1, 8.3_
 
-- [ ] 6. Queue, and prove it is idempotent
+- [x] 6. Queue, and prove it is idempotent
   - Add `queue_due_activities()` with the five-minute look-back and twenty-minute lookahead
   - Add the `profiles.notify_activities` column, defaulting true, and honour it
   - Schedule `fastr-queue-activities` at `*/15 * * * *`, guarded like the existing jobs
@@ -54,7 +54,7 @@ work drifting.
     occurrence outside the look-back is not queued
   - _Requirements: 2.4, 2.5, 3.4, 3.6, 4.3, 4.4, 4.8_
 
-- [ ] 7. Cancel on change
+- [x] 7. Cancel on change
   - Triggers on `activities` and `activity_schedules` cancelling pending notifications on disable, delete, or a change to
     a field that moves the time
   - Trigger on `profiles` cancelling pending activity notifications when `time_zone` changes
@@ -77,7 +77,7 @@ work drifting.
   - Parity tests asserting Postgres accepts and rejects exactly what Zod does
   - _Requirements: 12.5_
 
-- [ ] 10. Prove RLS on the new tables
+- [x] 10. Prove RLS on the new tables
   - Extend `supabase/tests/rls.test.ts`: for each new table, user B cannot select, insert, update or delete user A's rows
   - Assert a client cannot insert a notification directly, and cannot forge `user_id` on a schedule
   - Assert `activity_types` is readable by any signed-in user
