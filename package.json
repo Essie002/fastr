@@ -30,6 +30,7 @@
     "db:status": "node scripts/supabase.mjs status",
     "db:psql": "node scripts/psql.mjs",
     "gen:stages": "node --experimental-strip-types scripts/gen-stages.mjs",
+    "gen:activities": "node --experimental-strip-types scripts/gen-activities.mjs",
     "gen:icons": "node scripts/gen-icons.mjs",
     "gen:vapid": "node scripts/gen-vapid.mjs",
     "send:notifications": "node scripts/send-notifications.mjs",

@@ -9,6 +9,7 @@
 export * from './types.js';
 export * from './plans.js';
 export * from './stages.js';
+export * from './activities.js';
 export * from './schemas.js';
 export * from './time.js';
 export * from './streaks.js';

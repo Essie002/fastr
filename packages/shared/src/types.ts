@@ -43,6 +43,24 @@ export interface FastingStage {
   description: string;
 }
 
+/**
+ * How a completion of an activity is measured.
+ *
+ * `minutes` for anything you spend time on. `ml` exists for water alone, whose completions are volumes and are
+ * written to `water_entries` rather than `activity_log` (Requirement 5.6).
+ */
+export type ActivityUnit = 'minutes' | 'ml';
+
+/** A preset activity type. Generated into SQL and into the Edge Functions; see `activities.ts`. */
+export interface ActivityType {
+  key: string;
+  label: string;
+  icon: string;
+  defaultMinutes: number;
+  unit: ActivityUnit;
+  sortOrder: number;
+}
+
 export type FastStatus = 'active' | 'completed' | 'ended_early';
 
 export interface Fast {

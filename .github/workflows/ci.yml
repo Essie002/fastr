@@ -62,12 +62,14 @@ jobs:
       - name: Apply every migration from scratch
         run: node scripts/supabase.mjs db reset
 
-      # Three generated artefacts share one source of truth: the stage list in packages/shared. If any has not been
-      # regenerated, this leaves the tree dirty and the build fails — which turns forgetting into a red build rather
-      # than a notification that silently never fires.
-      - name: Check the generated stage data is current
+      # Five generated artefacts share two sources of truth in packages/shared: the fasting stage list and the
+      # activity type list. If any has not been regenerated, this leaves the tree dirty and the build fails — which
+      # turns forgetting into a red build rather than a notification that silently never fires, or a foreign key
+      # violation the first time a user picks an activity type that exists only in TypeScript.
+      - name: Check the generated reference data is current
         run: |
           npm run gen:stages
+          npm run gen:activities
           git diff --exit-code -- supabase/migrations supabase/functions/_shared
 
       # A new table without RLS is the single most likely way this app would leak one user's data to another, and it is
