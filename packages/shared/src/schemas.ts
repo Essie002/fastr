@@ -110,6 +110,7 @@ export const profileUpdateSchema = z.object({
   notifyGoal: z.boolean().optional(),
   notifyStages: z.boolean().optional(),
   notifyHourBefore: z.boolean().optional(),
+  notifyActivities: z.boolean().optional(),
 });
 
 export const weightEntrySchema = z.object({

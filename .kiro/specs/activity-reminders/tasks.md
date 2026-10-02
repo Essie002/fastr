@@ -96,7 +96,7 @@ work drifting.
     because this duplication is the design's one accepted redundancy
   - _Requirements: 7.4_
 
-- [ ] 13. The activities screen
+- [x] 13. The activities screen
   - `routes/Activities.tsx` as a sixth tab: list with type, duration, schedules in words, next occurrence, one-tap disable
   - `ActivityForm` with the preset picker plus "something else", duration, end-reminder toggle
   - `ScheduleFields` for the two shapes, showing the resulting notifications-per-day count for an interval schedule
@@ -104,19 +104,19 @@ work drifting.
   - Measure at 320, 375, 390 and 768px; confirm six tabs and no horizontal overflow
   - _Requirements: 1.3, 1.4, 7.1, 7.2, 7.3, 7.5, 6.5_
 
-- [ ] 14. Recording completions
+- [x] 14. Recording completions
   - A log control on the activities screen and on the timer screen
   - Water routes to the existing water logger rather than `activity_log`
   - Deleting a completion
   - _Requirements: 5.1, 5.2, 5.4, 5.5, 5.6_
 
-- [ ] 15. Activity history and stats
+- [x] 15. Activity history and stats
   - Completions grouped by local day
   - Per-activity counts for 7 and 30 days, and total minutes
   - Current streak reusing the existing streak helper
   - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 16. Settings
+- [x] 16. Settings
   - The `notify_activities` master toggle alongside the existing notification toggles
   - Document at both reminder definitions that the duplication with the fasting reminder is deliberate, and what merging
     would cost
@@ -127,19 +127,19 @@ work drifting.
   - Assert an export taken before this feature still imports
   - _Requirements: 12.6_
 
-- [ ] 18. Accessibility pass
+- [x] 18. Accessibility pass
   - axe on the activities screen, the form, and the log control
   - Keyboard-only walk of the new screens
   - Confirm no activity type is distinguished by icon or colour alone
   - Contrast test covers any new pair
   - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 19. Offline behaviour
+- [x] 19. Offline behaviour
   - Activity screens render from cache offline and show the standard banner
   - A completion recorded offline is retried
   - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 20. Documentation, and the deferral written down
+- [x] 20. Documentation, and the deferral written down
   - README: what the feature does, the two schedule shapes, the cron cadence change
   - Record the Strava decision and its costs where a future reader will find it, per Requirement 14
   - Confirm `npm run verify` green, then deploy the migrations and the function

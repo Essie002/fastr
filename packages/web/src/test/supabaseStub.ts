@@ -77,6 +77,7 @@ export function profileRow(overrides: Record<string, unknown> = {}) {
     notify_goal: true,
     notify_stages: false,
     notify_hour_before: false,
+    notify_activities: true,
     health_notice_at: '2026-01-01T00:00:00.000Z',
     ...overrides,
   };

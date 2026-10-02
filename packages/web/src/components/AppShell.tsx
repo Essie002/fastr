@@ -23,6 +23,7 @@ const TABS = [
   { to: '/plans', label: 'Plans', icon: '☰', end: false },
   { to: '/history', label: 'History', icon: '▤', end: false },
   { to: '/stats', label: 'Stats', icon: '◈', end: false },
+  { to: '/activities', label: 'Activity', icon: '✦', end: false },
   { to: '/settings', label: 'Settings', icon: '⚙', end: false },
 ] as const;
 

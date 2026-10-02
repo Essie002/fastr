@@ -101,6 +101,7 @@ export interface Profile {
   notifyGoal: boolean;
   notifyStages: boolean;
   notifyHourBefore: boolean;
+  notifyActivities: boolean;
   /** When the health notice was acknowledged. Null means the app is still gated. Req 1.5. */
   healthNoticeAt: Instant | null;
 }

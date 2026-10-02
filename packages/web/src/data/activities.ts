@@ -4,6 +4,11 @@ import { getSupabase } from './supabase.js';
 /**
  * Activities and their schedules. Requirements 1, 2, 3, 7.
  *
+ * Note the deliberate overlap with `data/reminders.ts`, which schedules the one fasting reminder. Requirement
+ * 13 records why they are separate: merging would need a data migration and would change the export format,
+ * breaking every file already downloaded, and the fasting reminder's "not while a fast is running" rule does
+ * not generalise to anything else. See the header of `components/Reminders.tsx` for the full reasoning.
+ *
  * Schedules are fetched nested with their activity in one query, because every screen that shows an activity
  * also shows when it happens — fetching them separately would mean two round trips and a moment where a row
  * renders with no schedule, which reads as "this never fires".

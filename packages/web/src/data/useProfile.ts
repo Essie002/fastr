@@ -69,6 +69,7 @@ function patchToProfile(patch: ProfilePatch): Partial<Profile> {
   if (patch.notify_goal !== undefined) next.notifyGoal = patch.notify_goal;
   if (patch.notify_stages !== undefined) next.notifyStages = patch.notify_stages;
   if (patch.notify_hour_before !== undefined) next.notifyHourBefore = patch.notify_hour_before;
+  if (patch.notify_activities !== undefined) next.notifyActivities = patch.notify_activities;
   if (patch.health_notice_at !== undefined) next.healthNoticeAt = patch.health_notice_at;
   return next;
 }

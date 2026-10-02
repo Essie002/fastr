@@ -13,7 +13,16 @@ long you have been going, how long is left, and which fasting stage you have rea
 around 12h" and so on. When you reach your goal, a notification arrives on your phone. Past fasts build a history with a
 calendar, streaks and some simple statistics. Alongside that you can log your weight, your water, and how each fast felt.
 
-It also has a daily reminder to start, dark mode, and a way to download everything you have recorded.
+**Activities** are the other half. Pick things you want to keep doing — a walk, a swim, a bike ride, a stretch, or just
+drinking water — and Fastr reminds you when you asked it to. Two kinds of schedule: at a time on chosen days ("swim at
+07:00 on Tuesdays"), or repeatedly inside a window ("water every two hours between 08:00 and 20:00"). Log what you
+actually did and the screen shows counts, time spent and a streak.
+
+Reminders carry the duration, so the notification says "Swim — 45 minutes" rather than just nudging you. An end reminder
+is available per activity and off by default, because a phone buzzing as you climb out of a pool is how people end up
+turning notifications off altogether — which would cost them their fasting alerts too.
+
+It also has a daily reminder to start a fast, dark mode, and a way to download everything you have recorded.
 
 **Fastr is not medical advice.** It is a timer that knows nothing about your health. Fasting does not suit everyone, and
 anything beyond a day needs a doctor's opinion first.
@@ -61,6 +70,7 @@ npm run send:notifications  # run the notification sender once, by hand
 npm run gen:vapid         # generate Web Push keys
 npm run gen:icons         # regenerate the PWA icons
 npm run gen:stages        # regenerate the stage list for SQL and Deno
+npm run gen:activities    # regenerate the activity type list for SQL and Deno
 npm run check:rls         # fail if any table is missing Row Level Security
 ```
 
@@ -69,6 +79,11 @@ database the dev server uses, and they delete every row belonging to the two see
 suite's leftovers decide whether the next one passes. So after `npm test` or `npm run verify`, signing in as
 `a@fastr.test` shows no history, no streaks and no weight. Nothing is broken; run `npm run db:reset` to get the demo
 data back.
+
+A note on scheduling cadence: there are now **two** cron jobs filling the notification queue. `fastr-queue-reminders`
+runs hourly for the one fasting reminder. `fastr-queue-activities` runs **every fifteen minutes**, because an interval
+schedule can place an occurrence at 10:30 and an hourly job physically cannot queue it in time. Both are idempotent — the
+unique index on `(activity_schedule_id, kind, due_at)` is what makes overlapping runs safe rather than careful code.
 
 A note on `send:notifications`: **`pg_cron` does not fire reliably in the local stack.** The extension is installed and
 the job is scheduled, but its background worker does not run dependably in the CLI's container, so during development you
@@ -312,6 +327,38 @@ criterion most easily broken by a design tweak and the only one nothing verifies
   than offering a button that cannot work.
 - **Whether `pg_cron` fires on schedule in the hosted project.** It does not locally, so this is checked by hand after the
   first deploy.
+
+## Why there is no Strava integration
+
+It was asked for, it was specified, and it was deliberately not built. The reasoning is recorded here because the
+question will come back.
+
+**Strava cannot do what people expect of it in this context.** It reports activities that have already happened; it has
+no mechanism to remind anyone to do anything. So it cannot drive a single reminder in this feature. What it could do is
+close the loop afterwards — you get the 07:00 swim reminder, you swim, Strava records it, and Fastr marks the activity
+done without you tapping anything.
+
+That is genuinely nice and it is also much larger than it sounds. It needs an OAuth client secret and therefore a new
+Edge Function; the first table in this project holding third-party credentials, with refresh handling; and either a
+webhook endpoint or polling. Two limits matter. Strava's [rate limits](https://developers.strava.com/docs/rate-limits/)
+are 200 requests per fifteen minutes and 2,000 a day **per application, not per user**, so every account on a deployment
+shares one budget. And the [API policy](https://maglev.strava.com/legal/api_policy) requires that a user's Strava data
+only ever be shown back to that same user — which row-level security already enforces here, so that part is free.
+_(Both summarised from Strava's documentation; rephrased for licensing compliance.)_
+
+The schema is ready for it rather than waiting for a migration: `activity_log.source` already accepts `'strava'`, and
+`activity_log_external` is a unique index on `(user_id, source, external_id)` so importing the same Strava activity twice
+cannot double it. Adding the integration is a new writer, not a rewrite of historical rows.
+
+## Two reminder systems, on purpose
+
+The fasting reminder and activity schedules do the same sort of thing in two places, and that is a decision rather than
+an oversight — Requirement 13 of `.kiro/specs/activity-reminders/` records it.
+
+Merging them would need a migration of every existing reminder row, and it would change `reminderSchema`, `exportSchema`
+and the import function, which breaks compatibility with every export anyone has already downloaded. The fasting
+reminder's one real piece of logic — do not nag me while a fast is already running — is a rule about fasts and does not
+generalise. The activity tables are shaped so it could fold in later if there is ever a reason.
 
 ## One known gap
 

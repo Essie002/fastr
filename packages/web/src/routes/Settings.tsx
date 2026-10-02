@@ -159,6 +159,17 @@ export default function Settings() {
           checked={p.notifyStages}
           onChange={(notify_stages) => save.mutate({ notify_stages })}
         />
+        {/*
+          Requirement 4.8. Separate from the three above on purpose: someone who wants to know when their
+          fast ends and does not want to be nagged about walking should be able to say so without deleting
+          their activities. Turning this off also withdraws anything already queued.
+        */}
+        <ToggleField
+          label="Activity reminders"
+          description="Everything on the Activity tab. Off silences them all without deleting anything."
+          checked={p.notifyActivities}
+          onChange={(notify_activities) => save.mutate({ notify_activities })}
+        />
       </section>
 
       <NotificationSettings />

@@ -26,11 +26,12 @@ interface ProfileRow {
   notify_goal: boolean;
   notify_stages: boolean;
   notify_hour_before: boolean;
+  notify_activities: boolean;
   health_notice_at: string | null;
 }
 
 const COLUMNS =
-  'id, display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before, health_notice_at';
+  'id, display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before, notify_activities, health_notice_at';
 
 export function toProfile(row: ProfileRow): Profile {
   return {
@@ -46,6 +47,7 @@ export function toProfile(row: ProfileRow): Profile {
     notifyGoal: row.notify_goal,
     notifyStages: row.notify_stages,
     notifyHourBefore: row.notify_hour_before,
+    notifyActivities: row.notify_activities,
     healthNoticeAt: row.health_notice_at,
   };
 }
@@ -63,6 +65,7 @@ export interface ProfilePatch {
   notify_goal?: boolean;
   notify_stages?: boolean;
   notify_hour_before?: boolean;
+  notify_activities?: boolean;
   health_notice_at?: string | null;
 }
 

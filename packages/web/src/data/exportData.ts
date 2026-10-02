@@ -20,7 +20,7 @@ export async function buildExport(): Promise<FastrExport> {
       supabase
         .from('profiles')
         .select(
-          'display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before',
+          'display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before, notify_activities',
         )
         .maybeSingle(),
       supabase
@@ -73,6 +73,7 @@ export async function buildExport(): Promise<FastrExport> {
           notifyGoal: row.notify_goal as boolean,
           notifyStages: row.notify_stages as boolean,
           notifyHourBefore: row.notify_hour_before as boolean,
+          notifyActivities: row.notify_activities as boolean,
         }
       : {},
     fasts: (fasts.data ?? []).map((fast) => {

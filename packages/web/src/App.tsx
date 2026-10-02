@@ -6,6 +6,7 @@ import Timer from './routes/Timer.js';
 import Plans from './routes/Plans.js';
 import History from './routes/History.js';
 import Stats from './routes/Stats.js';
+import Activities from './routes/Activities.js';
 import Settings from './routes/Settings.js';
 import SignIn from './routes/SignIn.js';
 import SignUp from './routes/SignUp.js';
@@ -47,6 +48,7 @@ export function App() {
             <Route path="plans" element={<Plans />} />
             <Route path="history" element={<History />} />
             <Route path="stats" element={<Stats />} />
+            <Route path="activities" element={<Activities />} />
             <Route path="settings" element={<Settings />} />
           </Route>
           {/* Outside the gate: a mistyped URL should say so rather than show the health notice. */}

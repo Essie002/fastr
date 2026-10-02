@@ -1299,3 +1299,114 @@ textarea.field__input {
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+/* --------------------------------------------------------------------------
+ * Activities
+ * -------------------------------------------------------------------------- */
+
+.activities {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+/* The card padding and border come from `.card`; this only adds the internal rhythm. */
+.activities__item {
+  margin: 0;
+}
+
+.activities__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.activities__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.activities__meta,
+.activities__schedules {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* No markers: these are one or two lines of prose describing when something happens, and a bullet beside
+   "Tuesday, Saturday at 07:00" reads as a list of separate things rather than one schedule. */
+.activities__schedules {
+  padding-left: 0;
+  list-style: none;
+}
+
+/*
+ * The next occurrence. Given the accent and the numeric face because it is the one line on the card that
+ * answers "is this configured the way I meant", which is the whole point of showing it (Requirement 7.4).
+ */
+.activities__next {
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* Sized to match the button it replaces, so acknowledging a log does not make the row jump. */
+.activities__logged {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target);
+  margin: 0;
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+/*
+ * A horizontal group with a gap.
+ *
+ * This did not exist until the activity screens needed it, which showed up in a browser as "Swim45mDelete" —
+ * three elements with no space between them, because the class was invented in the markup and never defined.
+ * Worth remembering that a missing class is silent: nothing warns, the elements simply touch.
+ */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Overrides `.history`'s grid for the rows that are a `.row`, so the gap above actually applies. */
+.history li.row {
+  display: flex;
+}
+
+/*
+ * A bare fieldset, used to group the schedule-type radios and the weekday checkboxes.
+ *
+ * The browser default draws a border and insets the legend, which looks like a dialog inside a card. The
+ * grouping still matters to assistive technology — it is what makes "Days" the name of seven checkboxes — so
+ * the element stays and only its decoration goes.
+ */
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.fieldset legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+/* The schedule-type radios are visually a segmented control, so the label carries the styling and the input
+   is screen-reader-only. `:focus-within` is what keeps a keyboard user able to see where they are. */
+.segmented__option:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

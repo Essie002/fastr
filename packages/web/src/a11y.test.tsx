@@ -211,6 +211,122 @@ describe('error and offline states', () => {
     await screen.findByText(/you are offline/i);
     await expectNoAxeViolations(container);
   });
+
+  /** Requirement 10. The activity screens, empty and populated, plus the add form. */
+  describe('activities', () => {
+    const activityRow = {
+      id: 'activity-1',
+      type_key: 'swim',
+      custom_label: null,
+      duration_minutes: 45,
+      notify_end: true,
+      enabled: true,
+      activity_schedules: [
+        {
+          id: 'schedule-1',
+          kind: 'at',
+          local_time: '07:00:00',
+          window_start: null,
+          window_end: null,
+          interval_minutes: null,
+          weekdays: [2, 6],
+          enabled: true,
+        },
+      ],
+    };
+
+    const logRow = {
+      id: 'log-1',
+      activity_id: 'activity-1',
+      label: 'Swim',
+      type_key: 'swim',
+      occurred_at: new Date().toISOString(),
+      minutes: 45,
+      source: 'manual',
+      note: null,
+    };
+
+    it('the empty state has no violations', async () => {
+      installSupabaseStub({
+        session: makeSession(),
+        tables: { profiles: [profileRow()], activities: [], activity_log: [] },
+      });
+      const { container } = renderApp(<App />, { route: '/activities' });
+      await screen.findByRole('heading', { level: 2, name: 'Nothing yet' });
+      await expectNoAxeViolations(container);
+    });
+
+    it('a populated list has no violations', async () => {
+      installSupabaseStub({
+        session: makeSession(),
+        tables: { profiles: [profileRow()], activities: [activityRow], activity_log: [logRow] },
+      });
+      const { container } = renderApp(<App />, { route: '/activities' });
+      await screen.findByRole('heading', { level: 2, name: /swim/i });
+      await expectNoAxeViolations(container);
+    });
+
+    it('the add form has no violations, in both schedule shapes', async () => {
+      installSupabaseStub({
+        session: makeSession(),
+        tables: { profiles: [profileRow()], activities: [], activity_log: [] },
+      });
+      const { container } = renderApp(<App />, { route: '/activities' });
+      await userEvent.click(
+        await screen.findByRole('button', { name: /add your first activity/i }),
+      );
+      await screen.findByRole('heading', { level: 2, name: 'Add an activity' });
+      await expectNoAxeViolations(container);
+
+      // The interval shape renders different controls, including the radio group whose inputs are
+      // visually hidden — the case most likely to produce an unlabelled control.
+      await userEvent.click(screen.getByRole('radio', { name: /repeatedly/i }));
+      await screen.findByLabelText('How often');
+      await expectNoAxeViolations(container);
+    });
+
+    it('names every weekday checkbox, so the letters are decoration', async () => {
+      /*
+       * Requirement 10.2. The seven day boxes read "S M T W T F S" — two Ts and two Ss — so the letter
+       * cannot be the accessible name. axe does not catch this: each box has *a* name, it is just an
+       * ambiguous one, which is why this is asserted directly.
+       */
+      installSupabaseStub({
+        session: makeSession(),
+        tables: { profiles: [profileRow()], activities: [], activity_log: [] },
+      });
+      renderApp(<App />, { route: '/activities' });
+      await userEvent.click(
+        await screen.findByRole('button', { name: /add your first activity/i }),
+      );
+
+      for (const day of [
+        'Sunday',
+        'Monday',
+        'Tuesday',
+        'Wednesday',
+        'Thursday',
+        'Friday',
+        'Saturday',
+      ]) {
+        expect(screen.getByRole('checkbox', { name: day }), day).toBeInTheDocument();
+      }
+    });
+
+    it('names each activity\u2019s controls, so a list of several is unambiguous', async () => {
+      // "Log it" and "Delete" repeated down a list are useless to a screen reader without the activity
+      // name attached, and axe reports nothing because each button does have a label.
+      installSupabaseStub({
+        session: makeSession(),
+        tables: { profiles: [profileRow()], activities: [activityRow], activity_log: [] },
+      });
+      renderApp(<App />, { route: '/activities' });
+
+      expect(await screen.findByRole('button', { name: 'Log Swim' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete Swim' })).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: 'Remind me about Swim' })).toBeInTheDocument();
+    });
+  });
 });
 
 describe('signed-out screens', () => {

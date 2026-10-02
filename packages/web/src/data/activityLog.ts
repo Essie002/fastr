@@ -83,8 +83,13 @@ export interface RecordInput {
   minutes: number | null;
   occurredAt?: Instant;
   note?: string | null;
-  /** For a volume activity. Millilitres, which go to the water feature rather than to this table. */
-  ml?: number;
+  /**
+   * For a volume activity. Millilitres, which go to the water feature rather than to this table.
+   *
+   * Explicitly `| undefined` because `exactOptionalPropertyTypes` is on, and the caller passes
+   * `ml: undefined` for a timed activity rather than omitting the key.
+   */
+  ml?: number | undefined;
 }
 
 /**

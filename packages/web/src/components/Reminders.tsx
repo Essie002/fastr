@@ -15,6 +15,19 @@ import {
  *
  * Several are allowed rather than one, because a single reminder cannot express "8pm on weekdays, 10pm at the
  * weekend", and that is a normal shape for someone's week.
+ *
+ * ## Why this is not the activities feature
+ *
+ * This overlaps visibly with activity schedules, and the duplication is deliberate — Requirement 13 of the
+ * activity-reminders spec records the decision rather than leaving it to look like an oversight.
+ *
+ * Merging them would be tidier and was rejected on cost. It needs a migration of every existing `reminders`
+ * row; it changes `reminderSchema`, `exportSchema` and the `import-data` function, which breaks compatibility
+ * with every export already downloaded; and the one piece of real logic here does not generalise — a fasting
+ * reminder is suppressed while a fast is already running, which is a rule about fasts and nothing else.
+ *
+ * The activity tables are shaped so this could become an activity type later. Until there is a reason, two
+ * small clear things beat one large general one.
  */
 export function Reminders({ timeZone }: { timeZone: string }) {
   const queryClient = useQueryClient();
