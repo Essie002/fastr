@@ -218,7 +218,14 @@ export function sampleRow(table: UserTable, userId: string, seed: number): Recor
   }
 }
 
-/** Removes every row belonging to the seed users. Run between suites with the service role. */
+/**
+ * Removes every row belonging to the seed users. Run between suites with the service role.
+ *
+ * Note that this is the same database the dev server talks to, so running the suite leaves the app empty — no
+ * history, no streaks, no weight for `a@fastr.test`. That is the price of test isolation against a real Postgres
+ * rather than a fake, and it is deliberate: `npm run db:reset` puts the demo data back. The README says so too,
+ * because the symptom looks exactly like a broken query.
+ */
 export async function resetUserData(stack: LocalStack): Promise<void> {
   const service = serviceClient(stack);
   const ids = [SEED_USERS.a.id, SEED_USERS.b.id];

@@ -64,6 +64,12 @@ npm run gen:stages        # regenerate the stage list for SQL and Deno
 npm run check:rls         # fail if any table is missing Row Level Security
 ```
 
+A note on the tests: **running them empties the app.** The suites under `supabase/tests` run against the same local
+database the dev server uses, and they delete every row belonging to the two seed users between tests — otherwise one
+suite's leftovers decide whether the next one passes. So after `npm test` or `npm run verify`, signing in as
+`a@fastr.test` shows no history, no streaks and no weight. Nothing is broken; run `npm run db:reset` to get the demo
+data back.
+
 A note on `send:notifications`: **`pg_cron` does not fire reliably in the local stack.** The extension is installed and
 the job is scheduled, but its background worker does not run dependably in the CLI's container, so during development you
 trigger the sender yourself. Its scheduling is verified against the hosted project. This is written down so "my
