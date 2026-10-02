@@ -153,14 +153,32 @@ in the bundle anyway. The key that does matter is the service role key, which ex
 5. **Tell the database where the functions are**, and give it the same cron secret, in the SQL editor:
 
    ```sql
-   alter database postgres set app.settings.functions_url = 'https://<ref>.supabase.co/functions/v1';
-   alter database postgres set app.settings.cron_secret   = '<the same CRON_SECRET>';
+   insert into private.app_settings (id, functions_url, cron_secret)
+   values (true, 'https://<ref>.supabase.co/functions/v1', '<the same CRON_SECRET>')
+   on conflict (id) do update
+     set functions_url = excluded.functions_url,
+         cron_secret   = excluded.cron_secret,
+         updated_at    = now();
    ```
 
+   This used to be two `alter database postgres set app.settings.…` statements, and they no longer work: a hosted
+   project refuses to set custom parameters even as `postgres`, at database or role level, through the SQL editor or
+   the pooler. The failure is quiet — `cron.schedule` succeeds, the job runs every minute, and `current_setting`
+   returns null, so the sender's own guard turns it into a no-op. A healthy-looking schedule that sends nothing. The
+   settings live in a table now; `private` is not served by PostgREST, so the secret has no HTTP surface.
+
 6. **Set the repository variables**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`,
-   `SUPABASE_PROJECT_REF`. And one secret, `SUPABASE_ACCESS_TOKEN`, in a `production` environment.
+   `SUPABASE_PROJECT_REF`. And, only if you want the manual **Deploy to Supabase** workflow, one secret,
+   `SUPABASE_ACCESS_TOKEN`, in a `production` environment. That token is your whole Supabase account, so skip it if
+   you would rather run `npx supabase db push` from your machine.
 
 7. **Enable Pages**, with GitHub Actions as the source.
+
+   On a free plan this requires a **public** repository — Pages for private repos needs GitHub Pro or above. Public is
+   the intended setup here: nothing secret is committed, and the anon key in the bundle is public by design because
+   row-level security, not the key, is what separates users. If the repo must stay private, serve the built site
+   somewhere else; Netlify and Cloudflare Pages are both free for private repos and can set real HTTP headers, which
+   Pages cannot — the reason the CSP currently travels in a meta tag.
 
 8. **Make yourself an account.** Open the deployed app and use the sign-up form. Or, if you would rather not have sign-up
    open at all, see [Who can sign up](#who-can-sign-up) below and invite yourself instead.
