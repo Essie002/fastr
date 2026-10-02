@@ -14,7 +14,7 @@ work drifting.
   - Unit tests: keys unique, sort orders unique, water is the only `ml` unit
   - _Requirements: 1.1, 1.2, 11.6_
 
-- [ ] 2. Create the three user tables
+- [x] 2. Create the three user tables
   - Migration with `activities`, `activity_schedules`, `activity_log` exactly as designed, including
     `activity_named_once`, `schedule_shape`, `external_id_needs_source` and the `activity_log_external` unique index
   - `before insert or update` trigger setting `activity_schedules.user_id` from the parent activity
@@ -24,7 +24,7 @@ work drifting.
   - Verify `npm run check:rls` passes
   - _Requirements: 1.5, 1.6, 1.7, 2.1, 2.3, 3.1, 3.2, 5.1, 5.3, 5.4, 11.5, 11.7_
 
-- [ ] 3. Unblock the `notifications` table
+- [x] 3. Unblock the `notifications` table
   - Drop `reminder_has_no_fast`; add `activity_id` and `activity_schedule_id` columns with cascading FKs
   - Extend the `kind` CHECK with `activity_start` and `activity_end`
   - Add the `notification_reference` CHECK so each kind carries exactly the reference it needs
@@ -32,7 +32,7 @@ work drifting.
   - Confirm existing fasting notification tests still pass unchanged
   - _Requirements: 11.1, 11.2, 11.3, 11.4, 12.1_
 
-- [ ] 4. Prove the kinds agree across three runtimes
+- [x] 4. Prove the kinds agree across three runtimes
   - Add `activity_start` and `activity_end` to `NotificationKind` in `packages/shared/src/types.ts`
   - Write the parity test that parses the CHECK constraint out of the migrations, reads the shared union, reads the Edge
     Function's union, and asserts all three sets are equal
@@ -61,7 +61,7 @@ work drifting.
   - Tests: disabling cancels pending and leaves sent; changing a time cancels then requeues on the next run
   - _Requirements: 8.2, 11.2_
 
-- [ ] 8. Teach the sender the two new kinds
+- [x] 8. Teach the sender the two new kinds
   - Add the kinds to the Edge Function's union; add `compose` branches using the generated `activityTypes.ts`
   - Add the `never` exhaustiveness guard so a missing branch is a build error
   - Hydrate activity rows in the existing batch step, alongside the fasts query

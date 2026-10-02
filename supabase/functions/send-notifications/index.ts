@@ -13,6 +13,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 import { STAGES } from '../_shared/stages.ts';
 import { PLANS } from '../_shared/plans.ts';
+import { findActivityType } from '../_shared/activityTypes.ts';
 
 /** Requirement 7.8. Anything later than this is reported rather than sent. */
 const STALE_AFTER_MINUTES = 30;
@@ -24,10 +25,21 @@ interface NotificationRow {
   id: string;
   user_id: string;
   fast_id: string | null;
-  kind: 'goal' | 'stage' | 'hour_before' | 'reminder';
+  activity_id: string | null;
+  // Third copy of this set. The others are the CHECK constraint on notifications.kind and the union in
+  // packages/shared, which this cannot import because `functions deploy` bundles only this directory.
+  // supabase/tests/notificationKinds.test.ts asserts all three agree.
+  kind: 'goal' | 'stage' | 'hour_before' | 'reminder' | 'activity_start' | 'activity_end';
   stage_key: string | null;
   due_at: string;
   attempts: number;
+}
+
+interface ActivityRow {
+  id: string;
+  type_key: string | null;
+  custom_label: string | null;
+  duration_minutes: number;
 }
 
 interface SubscriptionRow {
@@ -58,9 +70,13 @@ function formatDuration(minutes: number): string {
  * deploy rather than a migration, and a stage renamed in TypeScript cannot leave old queued rows announcing a
  * name that no longer exists.
  */
-function compose(row: NotificationRow, fast: FastRow | undefined) {
+function compose(row: NotificationRow, fast: FastRow | undefined, activity?: ActivityRow) {
   const plan = fast ? PLANS.find((candidate) => candidate.id === fast.plan_id) : undefined;
   const planLabel = plan?.label ?? 'Your fast';
+
+  // The activity's own name: its preset label, or the user's own words for a custom one.
+  const activityType = activity ? findActivityType(activity.type_key) : undefined;
+  const activityName = activityType?.label ?? activity?.custom_label?.trim() ?? 'your activity';
 
   switch (row.kind) {
     case 'goal': {
@@ -94,6 +110,45 @@ function compose(row: NotificationRow, fast: FastRow | undefined) {
         body: 'Tap to start, or change this in settings.',
         tag: 'reminder',
       };
+    case 'activity_start': {
+      // Water is measured in volume, so "45 minutes" would be nonsense for it. Requirement 4.1.
+      if (activityType?.unit === 'ml') {
+        return {
+          title: 'Time to drink water',
+          body: 'Tap to log a glass.',
+          tag: `activity-${row.activity_id}`,
+        };
+      }
+      return {
+        // A preset reads as a sentence; a custom label cannot, because it is a noun the app has never
+        // seen and "Time for a physio" is wrong as often as it is right.
+        title: activityType
+          ? `Time for a ${activityType.label.toLowerCase()}`
+          : `Time for: ${activityName}`,
+        body: formatDuration(activity?.duration_minutes ?? 0),
+        // One tag per activity, so a phone left unattended replaces rather than stacks. Requirement 4.6.
+        tag: `activity-${row.activity_id}`,
+      };
+    }
+    case 'activity_end':
+      return {
+        title: `${activityName} done?`,
+        body: 'Tap to log it.',
+        // Distinct from the start tag, or the end reminder would silently replace a start the user has
+        // not looked at yet.
+        tag: `activity-end-${row.activity_id}`,
+      };
+    default: {
+      /*
+       * Requirement 12.3. A kind with no branch is a build error here rather than a blank notification.
+       *
+       * Before this existed, `compose` had no default and returned `undefined` for an unhandled kind —
+       * which then went through `JSON.stringify` and was delivered as a push with no title and no body.
+       * The user got a silent, empty banner and nothing anywhere recorded a problem.
+       */
+      const unreachable: never = row.kind;
+      throw new Error(`No notification copy for kind: ${String(unreachable)}`);
+    }
   }
 }
 
@@ -146,12 +201,23 @@ Deno.serve(async (request) => {
   const fastIds = [
     ...new Set(rows.map((row) => row.fast_id).filter((id): id is string => id !== null)),
   ];
+  const activityIds = [
+    ...new Set(rows.map((row) => row.activity_id).filter((id): id is string => id !== null)),
+  ];
   const userIds = [...new Set(rows.map((row) => row.user_id))];
 
-  const [{ data: fasts }, { data: subscriptions }] = await Promise.all([
+  const [{ data: fasts }, { data: activities }, { data: subscriptions }] = await Promise.all([
     fastIds.length > 0
       ? supabase.from('fasts').select('id, plan_id, goal_minutes, start_at').in('id', fastIds)
       : Promise.resolve({ data: [] as FastRow[] }),
+    // Alongside the fasts query rather than per row, for the same reason: one catch-up run can hold a few
+    // hundred notifications, and a query each would be a few hundred round trips inside the send loop.
+    activityIds.length > 0
+      ? supabase
+          .from('activities')
+          .select('id, type_key, custom_label, duration_minutes')
+          .in('id', activityIds)
+      : Promise.resolve({ data: [] as ActivityRow[] }),
     supabase
       .from('push_subscriptions')
       .select('id, user_id, endpoint, p256dh, auth')
@@ -159,6 +225,9 @@ Deno.serve(async (request) => {
   ]);
 
   const fastById = new Map((fasts ?? []).map((fast) => [(fast as FastRow).id, fast as FastRow]));
+  const activityById = new Map(
+    (activities ?? []).map((activity) => [(activity as ActivityRow).id, activity as ActivityRow]),
+  );
   const subscriptionsByUser = new Map<string, SubscriptionRow[]>();
   for (const row of (subscriptions ?? []) as (SubscriptionRow & { user_id: string })[]) {
     const list = subscriptionsByUser.get(row.user_id) ?? [];
@@ -172,6 +241,8 @@ Deno.serve(async (request) => {
   let failed = 0;
 
   const stale: string[] = [];
+  /** Claimed and not stale, so delivery was attempted. What `sent_at` should be stamped on. */
+  const attempted: string[] = [];
   const gone: string[] = [];
   const succeeded: string[] = [];
   const softFailed: string[] = [];
@@ -187,9 +258,27 @@ Deno.serve(async (request) => {
       continue;
     }
 
+    attempted.push(row.id);
+
+    const activity = row.activity_id ? activityById.get(row.activity_id) : undefined;
+
+    /*
+     * Where tapping the notification lands. Requirement 4.7.
+     *
+     * Water goes to the root, which is the timer screen, because that is where the water logger lives and
+     * logging a glass should be one tap from the banner. Everything else activity-shaped goes to the
+     * activities screen. Fasting notifications keep the root they always had.
+     */
+    const url =
+      row.kind === 'activity_start' || row.kind === 'activity_end'
+        ? findActivityType(activity?.type_key)?.unit === 'ml'
+          ? '/fastr/'
+          : '/fastr/activities'
+        : '/fastr/';
+
     const payload = JSON.stringify({
-      ...compose(row, row.fast_id ? fastById.get(row.fast_id) : undefined),
-      url: '/fastr/',
+      ...compose(row, row.fast_id ? fastById.get(row.fast_id) : undefined, activity),
+      url,
     });
 
     const targets = subscriptionsByUser.get(row.user_id) ?? [];
@@ -224,14 +313,19 @@ Deno.serve(async (request) => {
     stale.length > 0
       ? supabase.from('notifications').update({ status: 'skipped' }).in('id', stale)
       : null,
-    succeeded.length > 0
+    /*
+     * Stamped on the rows that were actually attempted, which is every claimed row except the stale ones.
+     *
+     * This used to pass `rows.map(...)` — all of them — so the rows marked `skipped` two statements above
+     * also got a `sent_at`. The result was a row claiming both that it was skipped and that it was sent at a
+     * particular time, which is the one question `sent_at` exists to answer. Harmless to delivery and
+     * actively misleading to anyone debugging a missing notification.
+     */
+    attempted.length > 0
       ? supabase
           .from('notifications')
           .update({ sent_at: new Date().toISOString() })
-          .in(
-            'id',
-            rows.map((row) => row.id),
-          )
+          .in('id', attempted)
       : null,
     gone.length > 0 ? supabase.from('push_subscriptions').delete().in('endpoint', gone) : null,
     softFailed.length > 0 ? supabase.rpc('bump_push_failures', { ids: softFailed }) : null,

@@ -1,0 +1,56 @@
+feat: activity tables, and unblock the notification queue
+
+Tasks 2, 3, 4 and 8 of the activity-reminders spec. The schema half, plus
+the sender, which came forward because task 4's parity test demands it.
+
+Three tables. The activity/schedule split is load-bearing: there are two
+schedule shapes — a wall-clock time on weekdays, and an interval inside a
+daily window — and hanging both shapes' columns off `activities` would
+leave half of them null on every row and make the CHECK constraint
+unreadable. Separate, each shape is required-or-forbidden in one
+expression. It also means one activity can own several schedules, so
+"swim Tuesday 07:00 and Saturday 09:00" is one activity.
+
+activity_log is separate because it outlives the schedule: deleting an
+activity is a statement about the reminder, not a claim that the swim
+never happened. So `on delete set null`, and the label is snapshotted —
+joining for it would mean renaming an activity retitles history
+retroactively.
+
+Three blockers removed from `notifications`, each deliberately:
+
+- `reminder_has_no_fast` said any kind other than 'reminder' MUST have a
+  fast_id. True when written, a closed-world assumption, and it rejected
+  every activity notification outright. Replaced with a per-kind
+  constraint that states the same intent without assuming the set of
+  kinds is finished.
+- `notifications_unique_per_fast` is `where fast_id is not null`, so it
+  cannot see activity rows. A parallel partial index now covers them,
+  which is what lets the scheduler be a plain `on conflict do nothing`
+  despite running every 15 minutes with a 20-minute lookahead.
+- The old dedupe was "one reminder per user per local day", which would
+  have collapsed four activities a day into one notification. The index
+  replaces it.
+
+Task 4 is the test I most wanted: notification kinds are written three
+times — the SQL CHECK, the shared union, and the Edge Function's own
+union, which cannot import the shared package — and nothing checked they
+agree. Both drifts fail silently. A kind missing from SQL is an insert
+that fails inside a security-definer function, logged where nobody
+looks. A kind missing from the Edge Function fell off the end of
+`compose`, which had no default, returned undefined, and delivered a
+push with no title and no body. The test parses all three; `compose` now
+has a `never` guard so a missing branch is a build error.
+
+Also fixes a pre-existing bug found while reading the sender: the
+`sent_at` update applied to every claimed row, including the stale ones
+it had just marked `skipped` two statements earlier. Those rows claimed
+both that they were skipped and that they were sent at a specific time,
+which is the single question sent_at exists to answer.
+
+Water gets its own notification copy, because "45 minutes" is nonsense
+for a volume, and its own deep link to the timer screen where the water
+logger lives.
+
+Verified: db reset clean, check:rls passes across 13 tables, and all 144
+existing database tests pass unchanged.

@@ -139,7 +139,17 @@ export interface Reminder {
   enabled: boolean;
 }
 
-export type NotificationKind = 'goal' | 'stage' | 'hour_before' | 'reminder';
+/**
+ * What a queued notification is about.
+ *
+ * This union exists three times — here, as a CHECK constraint on `notifications.kind`, and as its own union
+ * inside the send-notifications Edge Function, which cannot import this package. Nothing in the type system
+ * connects them, and the two ways they drift are both silent: a kind missing from the SQL constraint is an
+ * insert that fails at queue time, and a kind missing from the Edge Function is a notification delivered with
+ * no text. `supabase/tests/notificationKinds.test.ts` reads all three and asserts they match.
+ */
+export type NotificationKind =
+  'goal' | 'stage' | 'hour_before' | 'reminder' | 'activity_start' | 'activity_end';
 export type NotificationStatus = 'pending' | 'sent' | 'skipped' | 'cancelled';
 
 export interface QueuedNotification {
