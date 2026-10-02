@@ -28,11 +28,20 @@ afterEach(clearSupabaseStub);
 describe('the manifest (Req 15.2)', () => {
   const manifest = JSON.parse(readFileSync(join(publicDir, 'manifest.webmanifest'), 'utf8'));
 
-  it('is scoped to the deployed subpath', () => {
-    // A manifest scoped to "/" on a project site makes the installed app open the wrong URL, and the browser
-    // refuses to install it at all.
-    expect(manifest.scope).toBe('/fastr/');
-    expect(manifest.start_url).toBe('/fastr/');
+  it('is scoped relative to wherever it is served from', () => {
+    /*
+     * These were `/fastr/` until the app had to be served from the root of a Netlify domain as well as from a
+     * subpath on Pages and in the container. A manifest is the one file that cannot read
+     * `import.meta.env.BASE_URL` — it is static JSON, copied verbatim — so hardcoding either answer breaks the
+     * other deployment, and the breakage is nasty: the browser silently refuses to install an app whose scope
+     * does not contain its own start URL.
+     *
+     * Relative references solve it outright, because a manifest's URLs resolve against the manifest's own
+     * location. Served at `/fastr/manifest.webmanifest`, "." is `/fastr/`; served at `/manifest.webmanifest`,
+     * it is `/`. One file, correct at every base.
+     */
+    expect(manifest.scope).toBe('.');
+    expect(manifest.start_url).toBe('.');
   });
 
   it('asks to open without browser chrome', () => {
@@ -49,9 +58,25 @@ describe('the manifest (Req 15.2)', () => {
     );
   });
 
-  it('points its icons at paths under the base', () => {
+  it('references its icons relatively, so they resolve at any base', () => {
+    // A leading slash is the failure this guards. "/icons/icon-192.png" resolves against the origin root, so on
+    // Pages or in the container — where the app lives under /fastr/ — every icon 404s and the install prompt
+    // never appears. There is nothing to see in the console; the prompt simply does not happen.
     for (const icon of manifest.icons as { src: string }[]) {
-      expect(icon.src.startsWith('/fastr/')).toBe(true);
+      expect(icon.src.startsWith('/'), `${icon.src} must not start with a slash`).toBe(false);
+      expect(icon.src.startsWith('icons/')).toBe(true);
+    }
+  });
+
+  it('resolves to the right place at both bases', () => {
+    // The arithmetic the browser does, done here, because the reasoning above is only correct if this holds.
+    for (const base of ['/fastr/', '/']) {
+      const manifestUrl = new URL(`${base}manifest.webmanifest`, 'https://example.com');
+      expect(new URL(manifest.start_url as string, manifestUrl).pathname).toBe(base);
+      expect(new URL(manifest.scope as string, manifestUrl).pathname).toBe(base);
+      expect(new URL((manifest.icons as { src: string }[])[0]!.src, manifestUrl).pathname).toBe(
+        `${base}icons/icon-192.png`,
+      );
     }
   });
 });

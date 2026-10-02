@@ -1,0 +1,96 @@
+# Publishing the web app to Netlify. Requirement 21.
+#
+# Netlify rather than GitHub Pages: Pages on a free plan serves public repositories only, and this one is private.
+# The trade turns out to be a gain — Netlify sets real HTTP headers, so `frame-ancestors` and `X-Frame-Options`
+# are finally enforceable rather than silently ignored in a <meta> tag. See netlify.toml.
+#
+# Runs only after CI has passed on `main`, through `workflow_run`, rather than duplicating the test suite here. A
+# deploy workflow that runs its own abbreviated checks is a deploy that can succeed while CI fails.
+#
+# Netlify's own Git integration is deliberately not used. It would need the Netlify GitHub App granted access to a
+# private repository, and it would build on every push regardless of whether the tests passed — which is exactly
+# the gate this workflow exists to enforce.
+
+name: Deploy to Netlify
+
+on:
+  workflow_run:
+    workflows: ['CI']
+    types: [completed]
+    branches: [main]
+  # So a deploy can be re-run without pushing an empty commit.
+  workflow_dispatch:
+
+concurrency:
+  group: netlify
+  # Not cancelled in progress: a half-finished deployment is worse than a queued one.
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and publish
+    # The gate. A failed or cancelled CI run must not reach this.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # workflow_run checks out the default branch by default, which is right here but worth being explicit
+          # about: deploying a different commit from the one CI verified would defeat the gate.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        env:
+          # Repository *variables*, not secrets. Both are public by design — the anon key identifies the project
+          # and Row Level Security is what protects the data — and Vite bakes them into the bundle, so hiding them
+          # in secrets would conceal them from the maintainer while shipping them to every visitor.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VITE_VAPID_PUBLIC_KEY }}
+          # Netlify serves from the root of its own domain, unlike Pages and the container image.
+          VITE_BASE_PATH: '/'
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY as repository variables first."
+            echo "Without them the app builds and then refuses to start, which is a worse way to find out."
+            exit 1
+          fi
+          npm run build --workspace @fastr/web
+
+      - name: Confirm the build is rooted, not under /fastr/
+        # The one thing that silently breaks when a host changes. If VITE_BASE_PATH is ever dropped, the build
+        # succeeds and every asset 404s in production — a blank page, with nothing in the logs to explain it.
+        run: |
+          if ! grep -q 'src="/assets/' packages/web/dist/index.html; then
+            echo "index.html does not reference /assets/ at the root. VITE_BASE_PATH is probably not set."
+            grep -oE '(src|href)="[^"]*"' packages/web/dist/index.html || true
+            exit 1
+          fi
+
+      - name: Deploy
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
+            echo "Set the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repository secrets first."
+            exit 1
+          fi
+          npx --yes netlify-cli@17 deploy \
+            --dir packages/web/dist \
+            --prod \
+            --message "${{ github.sha }}"

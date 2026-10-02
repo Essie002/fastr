@@ -4,16 +4,28 @@ import { copyFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 /**
- * Fastr is served from GitHub Pages, which imposes two things this file exists to work around.
+ * Where the app is served from, and the two problems that creates.
  *
- * **It serves from a subpath.** A project site lives at `https://<user>.github.io/<repo>/`, so every
- * asset URL needs that prefix. `base` handles the assets; the router needs a matching `basename` or
- * the paths work and the routes do not.
+ * **It may serve from a subpath.** A GitHub Pages project site lives at `https://<user>.github.io/<repo>/`, and
+ * the container image serves under the same prefix, so every asset URL needs it. `base` handles the assets; the
+ * router needs a matching `basename` or the paths work and the routes do not.
  *
- * **It has no server-side routing.** See the `spaFallback` plugin below.
+ * **It may have no server-side routing.** See the `spaFallback` plugin below.
+ *
+ * The default stays `/fastr/` because that is what Pages, the Dockerfile, the nginx config and CI all expect.
+ * A host that serves from the root of its own domain — Netlify, Cloudflare Pages — sets `VITE_BASE_PATH=/`
+ * instead. Everything downstream reads `import.meta.env.BASE_URL`, so this is the only place that decides.
  */
 
-const BASE = '/fastr/';
+const DEFAULT_BASE = '/fastr/';
+
+/** Normalised to a leading and trailing slash, which is what Vite and the router both expect. */
+function normaliseBase(value: string | undefined): string {
+  const trimmed = (value ?? '').trim();
+  if (!trimmed) return DEFAULT_BASE;
+  if (trimmed === '/') return '/';
+  return `/${trimmed.replace(/^\/+|\/+$/g, '')}/`;
+}
 
 /**
  * Copies `index.html` to `404.html` after the build.
@@ -89,7 +101,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, resolve(import.meta.dirname), 'VITE_');
 
   return {
-    base: BASE,
+    base: normaliseBase(env.VITE_BASE_PATH),
     plugins: [react(), cspPlugin(env.VITE_SUPABASE_URL ?? ''), spaFallback()],
     server: { port: 5173 },
     build: {

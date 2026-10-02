@@ -86,7 +86,7 @@ it is the entire reason Supabase is the back end rather than a static app with l
 
 | Component | Role | Why this and not something else |
 | --- | --- | --- |
-| **GitHub Pages** | Serves the built SPA. | Free, already where the code lives, and one workflow deploys it. Netlify or Cloudflare Pages would add HTTP headers, which Pages cannot do, but also a second account and a second place to look when something breaks. Revisit if the meta-tag CSP proves too limiting. |
+| **Netlify** (was GitHub Pages) | Serves the built SPA. | Pages was chosen first: free, already where the code lives, one workflow. It was ruled out on contact with reality — Pages serves only *public* repositories on a free plan, and this repository is private. Netlify is free for private repos and, as the original note predicted, brings the HTTP headers Pages cannot set, so the meta-tag CSP is no longer the only policy and the framing gap is closed. Cost: a second account, and a base path that is now a build variable rather than a constant. |
 | **Supabase Auth** | Accounts, passwords, JWTs, password reset. | Writing authentication is the single worst use of time on a project like this. Whether sign-up is open is a dashboard setting rather than code, so it can be closed again without a deploy. |
 | **Postgres + RLS** | Data, and every rule that matters. | The browser talks to it directly, so it has to be the security boundary. RLS is the feature that makes a published anon key safe. |
 | **Supabase Realtime** | Push fast changes to other open devices. | Requirement 5.6 needs a second device to notice. Realtime is already there and needs no extra service; polling on focus is the fallback and is implemented anyway for when the socket is down. |
@@ -975,5 +975,10 @@ Three things this design does not fully resolve, recorded rather than hidden.
 2. **Notification timing depends on a free-tier scheduler.** The design bounds the damage (a one-minute resolution, a
    30-minute staleness cut-off, an in-app alert as a second path) but cannot promise a notification lands within a minute of
    the goal on a free project.
-3. **Fastr can be framed,** because `frame-ancestors` cannot be set from a meta tag on GitHub Pages. Moving the front end to
-   a host that sets headers fixes it, and is a change of workflow rather than of application code.
+3. ~~**Fastr can be framed,** because `frame-ancestors` cannot be set from a meta tag on GitHub Pages. Moving the front end
+   to a host that sets headers fixes it, and is a change of workflow rather than of application code.~~
+
+   **Resolved.** It turned out not to be a choice: GitHub Pages serves public repositories only on a free plan, and this
+   repository is private, so the front end moved to Netlify. That made real headers available, and `netlify.toml` sets
+   `frame-ancestors 'none'` and `X-Frame-Options: DENY`, along with HSTS and a `Permissions-Policy`. The prediction held
+   exactly — no application code changed, only the base path, which is now a build variable.

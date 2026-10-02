@@ -3,8 +3,8 @@
 Intermittent fasting tracker. Pick a plan, start a fast, and get told when it is done, even with the app closed.
 
 A responsive web app that installs to a phone's home screen. Several people can use it, each with their own account and
-their own data. It runs as static files on GitHub Pages with [Supabase](https://supabase.com) as the entire back end, so
-it costs nothing to host.
+their own data. It runs as static files on [Netlify](https://netlify.com) with [Supabase](https://supabase.com) as the
+entire back end, so it costs nothing to host.
 
 ## What it does
 
@@ -172,13 +172,27 @@ in the bundle anyway. The key that does matter is the service role key, which ex
    `SUPABASE_ACCESS_TOKEN`, in a `production` environment. That token is your whole Supabase account, so skip it if
    you would rather run `npx supabase db push` from your machine.
 
-7. **Enable Pages**, with GitHub Actions as the source.
+7. **Create the Netlify site** and give GitHub the two secrets it needs to deploy to it:
 
-   On a free plan this requires a **public** repository — Pages for private repos needs GitHub Pro or above. Public is
-   the intended setup here: nothing secret is committed, and the anon key in the bundle is public by design because
-   row-level security, not the key, is what separates users. If the repo must stay private, serve the built site
-   somewhere else; Netlify and Cloudflare Pages are both free for private repos and can set real HTTP headers, which
-   Pages cannot — the reason the CSP currently travels in a meta tag.
+   ```bash
+   npx netlify-cli login                      # opens a browser once
+   npx netlify-cli sites:create --name fastr  # note the Site ID it prints
+   ```
+
+   Then add `NETLIFY_AUTH_TOKEN` (Netlify → User settings → Applications → personal access token) and
+   `NETLIFY_SITE_ID` as repository **secrets**. After that, every push to `main` that passes CI deploys itself.
+
+   Netlify rather than GitHub Pages because **Pages on a free plan serves public repositories only**, and this one is
+   private. Pages needs GitHub Pro for a private repo. The trade turned out to be a gain: Netlify sets real HTTP
+   headers, so `frame-ancestors` and `X-Frame-Options` are actually enforced rather than silently ignored in a meta
+   tag — see `netlify.toml`, which also carries HSTS, `Permissions-Policy` and the cache rules.
+
+   Netlify serves from the root of its own domain, so its build sets `VITE_BASE_PATH=/`. Everything else — Pages, the
+   container image, CI — keeps the default `/fastr/`. That variable is the only thing that moves the app, and the
+   deploy workflow fails loudly if the built `index.html` is not rooted, because a wrong base builds fine and then
+   404s every asset in production.
+
+   If you would rather use Pages, make the repo public and restore `deploy-pages.yml` from git history.
 
 8. **Make yourself an account.** Open the deployed app and use the sign-up form. Or, if you would rather not have sign-up
    open at all, see [Who can sign up](#who-can-sign-up) below and invite yourself instead.
@@ -207,7 +221,7 @@ confirmation link lands on the same callback route.
 
 ### Afterwards
 
-The web app deploys itself: push to `main`, CI passes, and the Pages workflow publishes. Database changes are deliberate —
+The web app deploys itself: push to `main`, CI passes, and the Netlify workflow publishes. Database changes are deliberate —
 run the **Deploy to Supabase** workflow by hand and type `deploy` to confirm. A migration cannot be undone by re-running
 the previous workflow, which is why it is not automatic.
 
@@ -230,7 +244,7 @@ rot unnoticed.
 
 | Item                                                     | Plan | Monthly |
 | -------------------------------------------------------- | ---- | ------- |
-| GitHub Pages and Actions, public repository              | Free | $0      |
+| Netlify static hosting, and GitHub Actions               | Free | $0      |
 | Supabase: Postgres, Auth, Realtime, Edge Functions, Cron | Free | $0      |
 | **Total**                                                |      | **$0**  |
 
@@ -279,14 +293,14 @@ criterion most easily broken by a design tweak and the only one nothing verifies
 - **Whether `pg_cron` fires on schedule in the hosted project.** It does not locally, so this is checked by hand after the
   first deploy.
 
-## Two known gaps
-
-**Fastr can be framed by another site.** `frame-ancestors` is ignored in a `<meta>` tag and `X-Frame-Options` is a header
-only, and GitHub Pages sets no headers. The container image sets both, so running it there closes the gap. Nothing in the
-app hides a destructive action behind a single click, which is what makes this tolerable rather than fine.
+## One known gap
 
 **`style-src` allows `'unsafe-inline'`.** React writes inline styles for the progress ring's rotation. Moving the ring to
 CSS custom properties would remove the need; it is a worthwhile follow-up rather than a launch blocker.
+
+**Closed:** Fastr could previously be framed by another site. `frame-ancestors` is ignored in a `<meta>` tag and
+`X-Frame-Options` is header-only, and GitHub Pages sets no headers at all, so there was nowhere to put either. Moving the
+front end to Netlify made headers available and `netlify.toml` now sets both. The container image already did.
 
 ## Where the design lives
 

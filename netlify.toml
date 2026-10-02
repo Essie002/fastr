@@ -1,0 +1,93 @@
+# Netlify deployment.
+#
+# Netlify rather than GitHub Pages because Pages on a free plan only serves public repositories, and this one is
+# private. It turns out to be the better host anyway: Netlify can set real HTTP headers, which is the one thing
+# Pages cannot, and which the Content Security Policy has been working around by travelling in a <meta> tag.
+#
+# Two differences from the Pages build:
+#
+#   1. The site is served from the root of its own domain, so VITE_BASE_PATH is "/" rather than "/fastr/".
+#      Everything downstream reads import.meta.env.BASE_URL, so this single variable moves the whole app.
+#
+#   2. Routing is a real server rule rather than a copy of index.html named 404.html. The Pages fallback returns
+#      an actual 404 status for every deep link; the redirect below returns 200, which is what a SPA route is.
+
+[build]
+  command = "npm run build --workspace @fastr/web"
+  publish = "packages/web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  VITE_BASE_PATH = "/"
+
+# ---------------------------------------------------------------------------
+# Client-side routing
+# ---------------------------------------------------------------------------
+
+# Every path that is not a real file is the app. `status = 200` rather than a redirect, so /history is served as
+# /history with the app rendering it, rather than the browser being sent somewhere else and losing the URL.
+#
+# Netlify checks for a matching file first, so assets, icons, the manifest and the service worker are unaffected.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ---------------------------------------------------------------------------
+# Headers
+# ---------------------------------------------------------------------------
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # The gap the meta-tag CSP could not close. `frame-ancestors` is ignored in meta form and
+    # `X-Frame-Options` is header-only, so until now the app could be framed by any site — which for an app
+    # whose session lives in a browser is a clickjacking surface. Both are set here, belt and braces, because
+    # X-Frame-Options is what older browsers honour.
+    #
+    # This is a *second* policy alongside the one in the document, which is deliberate and safe: multiple CSPs
+    # are each enforced independently, so naming only frame-ancestors here adds that restriction without
+    # loosening or duplicating the rest.
+    Content-Security-Policy = "frame-ancestors 'none'"
+    X-Frame-Options = "DENY"
+
+    # Stops a response being reinterpreted as a type it is not — the classic way a user-supplied file becomes
+    # script. Nothing here is user-supplied, but the header costs nothing.
+    X-Content-Type-Options = "nosniff"
+
+    # Two years, subdomains included, and preload-eligible. Netlify serves HTTPS only, so this closes the
+    # first-visit-over-HTTP window rather than changing day-to-day behaviour.
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+    # Already a meta tag in the document; as a header it applies to every response, including ones that are
+    # not HTML.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    # Fastr asks for notifications and nothing else. Everything it never uses is denied outright, so a
+    # dependency that suddenly wants the camera fails rather than prompting.
+    Permissions-Policy = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+
+# Hashed filenames, so they can be cached forever. Vite puts a content hash in every asset name, which means a
+# changed file is a different URL and this can never serve a stale one.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# The service worker is the opposite case: it has no hash in its name, and a cached one keeps an old app alive
+# indefinitely because the worker is what decides when to update. Revalidate every time.
+[[headers]]
+  for = "/service-worker.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Same reasoning: both are fetched by name, and a stale copy is worse than a request.
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/theme-boot.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
