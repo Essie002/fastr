@@ -26,3 +26,6 @@ supabase/functions/.env
 .DS_Store
 # The hosted project's Postgres password, written by the deploy. Never committed.
 .supabase-db-password
+# Netlify site id, written during deployment. Not secret, but machine-specific.
+.netlify-site-id
+.netlify/

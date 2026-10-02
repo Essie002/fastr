@@ -167,10 +167,27 @@ in the bundle anyway. The key that does matter is the service role key, which ex
    returns null, so the sender's own guard turns it into a no-op. A healthy-looking schedule that sends nothing. The
    settings live in a table now; `private` is not served by PostgREST, so the secret has no HTTP surface.
 
+5b. **Push the auth settings.** A fresh Supabase project does not match this repo's `config.toml`, and two of the
+differences matter: the minimum password length is 6 where Requirement 1.3 says 10, and `secure_password_change` is
+off where Requirement 3.2 needs it on. The redirect allow-list also starts empty, which makes every password-reset
+link fail.
+
+    ```bash
+    FASTR_SITE_URL=https://<your-site>.netlify.app \
+    FASTR_CALLBACK_URL=https://<your-site>.netlify.app/auth/callback \
+    FASTR_EMAIL_MAX_FREQUENCY=1m0s \
+      node scripts/supabase.mjs config push
+    ```
+
+    Those three are read from the environment rather than written in `config.toml` because they are the settings that
+    genuinely differ per deployment, and `config push` sends the whole file — a literal would either push `localhost`
+    to production or point local reset emails at the live site. `scripts/supabase.mjs` defaults all three to their
+    local values, so `npm run db:start` needs none of them. Run `config diff` first to see exactly what will change.
+
 6. **Set the repository variables**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`,
-   `SUPABASE_PROJECT_REF`. And, only if you want the manual **Deploy to Supabase** workflow, one secret,
-   `SUPABASE_ACCESS_TOKEN`, in a `production` environment. That token is your whole Supabase account, so skip it if
-   you would rather run `npx supabase db push` from your machine.
+`SUPABASE_PROJECT_REF`. And, only if you want the manual **Deploy to Supabase** workflow, one secret,
+`SUPABASE_ACCESS_TOKEN`, in a `production` environment. That token is your whole Supabase account, so skip it if
+you would rather run `npx supabase db push` from your machine.
 
 7. **Create the Netlify site** and give GitHub the two secrets it needs to deploy to it:
 

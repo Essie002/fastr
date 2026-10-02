@@ -157,7 +157,12 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:5173"
+#
+# Environment-driven, because this is the one setting that is genuinely different per deployment and
+# `supabase config push` is all-or-nothing: a literal value here would either send `localhost` to the
+# hosted project or point local password-reset emails at production. `scripts/supabase.mjs` defaults
+# both variables to the local values, so `npm run db:start` needs no setup.
+site_url = "env(FASTR_SITE_URL)"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
@@ -167,10 +172,11 @@ site_url = "http://localhost:5173"
 # `/auth/callback` is the only route that turns a URL into a session, and these are the exact addresses it
 # is allowed to be reached at. A wildcard would be less typing and would let any path on the origin receive
 # a token.
-additional_redirect_urls = [
-  "http://localhost:5173/fastr/auth/callback",
-  "https://essie002.github.io/fastr/auth/callback",
-]
+#
+# Deliberately *not* a list containing both localhost and production. An allow-listed redirect is a
+# place Supabase will hand a session token to, so production should not trust localhost and local
+# development has no reason to trust the live site.
+additional_redirect_urls = ["env(FASTR_CALLBACK_URL)"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -257,10 +263,15 @@ enable_confirmations = false
 # because it is the behaviour the settings screen has to handle, and a local stack that skipped it
 # would let a broken flow pass every test.
 secure_password_change = true
-# Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
-# Number of characters used in the email OTP.
-otp_length = 6
+# The minimum gap between two password-reset or confirmation emails to the same address.
+#
+# Environment-driven for the same reason as the URLs above: one second is what makes a reset flow
+# testable by hand against Inbucket, and one second in production is an email-flooding tool pointed at
+# whichever address an attacker types. The wrapper defaults it to 1s locally; the push sets 1m0s.
+max_frequency = "env(FASTR_EMAIL_MAX_FREQUENCY)"
+# Number of characters used in the email OTP. Eight rather than Supabase's default six: nothing in Fastr
+# sends an OTP today, so the only cost of the stronger value is that it is there if that ever changes.
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 

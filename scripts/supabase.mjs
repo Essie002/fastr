@@ -24,6 +24,21 @@ if (!env.DOCKER_HOST && existsSync(hostFile)) {
   if (match) env.DOCKER_HOST = match[1].trim();
 }
 
+/*
+ * Local defaults for the two auth URLs that `config.toml` reads from the environment.
+ *
+ * Those two are environment-specific by nature — the hosted project's site URL is the Netlify domain, the local
+ * one is Vite's dev server — and `supabase config push` sends the whole file, so a literal in config.toml would
+ * either push `localhost` to production or point local emails at the live site.
+ *
+ * Defaulted here rather than required, so `npm run db:start` keeps working with no setup. The CLI fails outright
+ * on an unset `env()` reference, and "Error: env(FASTR_SITE_URL) is unset" is not a useful first experience.
+ * Pushing config to the hosted project means setting them explicitly; the README shows the command.
+ */
+env.FASTR_SITE_URL ??= 'http://localhost:5173';
+env.FASTR_CALLBACK_URL ??= 'http://localhost:5173/fastr/auth/callback';
+env.FASTR_EMAIL_MAX_FREQUENCY ??= '1s';
+
 try {
   execFileSync('npx', ['supabase', ...process.argv.slice(2)], {
     cwd: root,
