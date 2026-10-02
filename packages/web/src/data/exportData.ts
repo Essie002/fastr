@@ -15,22 +15,33 @@ import { getSupabase } from './supabase.js';
 export async function buildExport(): Promise<FastrExport> {
   const supabase = getSupabase();
 
-  const [profile, fasts, weights, water, dayNotes, reminders] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select(
-        'display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before',
-      )
-      .maybeSingle(),
-    supabase
-      .from('fasts')
-      .select('plan_id, goal_minutes, start_at, ended_at, status, mood, energy, note')
-      .order('start_at', { ascending: true }),
-    supabase.from('weight_entries').select('measured_on, grams').order('measured_on'),
-    supabase.from('water_entries').select('logged_at, ml').order('logged_at'),
-    supabase.from('day_notes').select('day, mood, energy, note').order('day'),
-    supabase.from('reminders').select('local_time, weekdays, enabled').order('local_time'),
-  ]);
+  const [profile, fasts, weights, water, dayNotes, reminders, activities, activityLog] =
+    await Promise.all([
+      supabase
+        .from('profiles')
+        .select(
+          'display_name, time_zone, weight_unit, volume_unit, theme, default_plan_id, custom_goal_minutes, water_goal_ml, notify_goal, notify_stages, notify_hour_before',
+        )
+        .maybeSingle(),
+      supabase
+        .from('fasts')
+        .select('plan_id, goal_minutes, start_at, ended_at, status, mood, energy, note')
+        .order('start_at', { ascending: true }),
+      supabase.from('weight_entries').select('measured_on, grams').order('measured_on'),
+      supabase.from('water_entries').select('logged_at, ml').order('logged_at'),
+      supabase.from('day_notes').select('day, mood, energy, note').order('day'),
+      supabase.from('reminders').select('local_time, weekdays, enabled').order('local_time'),
+      supabase
+        .from('activities')
+        .select(
+          'type_key, custom_label, duration_minutes, notify_end, enabled, activity_schedules (kind, local_time, window_start, window_end, interval_minutes, weekdays, enabled)',
+        )
+        .order('created_at'),
+      supabase
+        .from('activity_log')
+        .select('label, type_key, occurred_at, minutes, note')
+        .order('occurred_at'),
+    ]);
 
   const firstError =
     profile.error ??
@@ -38,7 +49,9 @@ export async function buildExport(): Promise<FastrExport> {
     weights.error ??
     water.error ??
     dayNotes.error ??
-    reminders.error;
+    reminders.error ??
+    activities.error ??
+    activityLog.error;
   if (firstError) throw firstError;
 
   const row = profile.data as Record<string, unknown> | null;
@@ -98,6 +111,54 @@ export async function buildExport(): Promise<FastrExport> {
         localTime: (typed.local_time as string).slice(0, 5),
         weekdays: typed.weekdays as number[],
         enabled: typed.enabled as boolean,
+      };
+    }),
+
+    /*
+     * Activities with their schedules nested, which is how they are restored: a schedule is meaningless
+     * without its parent, and a flat list of both would need ids in the file to reconnect them. Nesting keeps
+     * the export free of database ids entirely, so importing into a different account cannot collide.
+     */
+    activities: (activities.data ?? []).map((activity) => {
+      const typed = activity as Record<string, unknown>;
+      const schedules = (typed.activity_schedules as Record<string, unknown>[] | null) ?? [];
+
+      return {
+        typeKey: typed.type_key as string | null,
+        customLabel: typed.custom_label as string | null,
+        durationMinutes: typed.duration_minutes as number,
+        notifyEnd: typed.notify_end as boolean,
+        enabled: typed.enabled as boolean,
+        schedules: schedules.map((schedule) =>
+          // Discriminated on `kind`, with the other shape's fields omitted rather than set to null. The
+          // schema forbids them being present, which is what keeps an exported file importable.
+          schedule.kind === 'at'
+            ? {
+                kind: 'at' as const,
+                localTime: (schedule.local_time as string).slice(0, 5),
+                weekdays: schedule.weekdays as number[],
+                enabled: schedule.enabled as boolean,
+              }
+            : {
+                kind: 'every' as const,
+                windowStart: (schedule.window_start as string).slice(0, 5),
+                windowEnd: (schedule.window_end as string).slice(0, 5),
+                intervalMinutes: schedule.interval_minutes as number,
+                weekdays: schedule.weekdays as number[],
+                enabled: schedule.enabled as boolean,
+              },
+        ),
+      };
+    }),
+
+    activityLog: (activityLog.data ?? []).map((entry) => {
+      const typed = entry as Record<string, unknown>;
+      return {
+        label: typed.label as string,
+        typeKey: typed.type_key as string | null,
+        occurredAt: typed.occurred_at as string,
+        minutes: typed.minutes as number | null,
+        note: typed.note as string | null,
       };
     }),
   };

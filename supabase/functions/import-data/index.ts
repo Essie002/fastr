@@ -28,6 +28,23 @@ interface ExportShape {
   waterEntries?: { loggedAt: string; ml: number }[];
   dayNotes?: { day: string; mood: number | null; energy: number | null; note: string | null }[];
   reminders?: { localTime: string; weekdays: number[]; enabled: boolean }[];
+  // Optional, because an export taken before activities existed has neither key and must still import
+  // (Requirement 12.6). The SQL function coalesces both against an empty array.
+  activities?: {
+    typeKey: string | null;
+    customLabel: string | null;
+    durationMinutes: number;
+    notifyEnd: boolean;
+    enabled: boolean;
+    schedules: Record<string, unknown>[];
+  }[];
+  activityLog?: {
+    label: string;
+    typeKey: string | null;
+    occurredAt: string;
+    minutes: number | null;
+    note: string | null;
+  }[];
 }
 
 function badRequest(message: string) {

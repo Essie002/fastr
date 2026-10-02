@@ -71,7 +71,7 @@ work drifting.
   - Also fix the pre-existing bug found while reading this file: the `sent_at` update applies to every claimed row
     including the stale ones just marked `skipped`
 
-- [ ] 9. Validation, in both places
+- [x] 9. Validation, in both places
   - Zod schemas for activity, schedule and completion in `packages/shared/src/schemas.ts`, including the
     window-longer-than-interval rule and the exactly-one-of naming rule
   - Parity tests asserting Postgres accepts and rejects exactly what Zod does
@@ -83,14 +83,14 @@ work drifting.
   - Assert `activity_types` is readable by any signed-in user
   - _Requirements: 12.4, 11.6_
 
-- [ ] 11. Data layer
+- [x] 11. Data layer
   - `data/activities.ts`: list with schedules, create, update, delete, toggle
   - `data/activityLog.ts`: record and delete a completion; a water completion writes through the existing water layer
   - Add `activities` and `activity_schedules` to the realtime publication with `replica identity full`
   - Move `describeWeekdays()` into `packages/shared` and point both reminder systems at the one copy
   - _Requirements: 5.6, 9.2_
 
-- [ ] 12. Next-occurrence in TypeScript, agreeing with SQL
+- [x] 12. Next-occurrence in TypeScript, agreeing with SQL
   - `nextOccurrence(schedule, now, timeZone)` in `packages/shared`
   - A test driving the same fixtures through both the TypeScript and the SQL function and asserting identical answers,
     because this duplication is the design's one accepted redundancy
@@ -122,7 +122,7 @@ work drifting.
     would cost
   - _Requirements: 4.8, 13.1, 13.2_
 
-- [ ] 17. Export and import
+- [x] 17. Export and import
   - Add activities, schedules and completions to the export payload and the import schema
   - Assert an export taken before this feature still imports
   - _Requirements: 12.6_

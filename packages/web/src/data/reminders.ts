@@ -80,25 +80,10 @@ export async function deleteReminder(id: string): Promise<void> {
   if (error) throw error;
 }
 
-/** 0 is Sunday, matching Postgres `extract(dow)`, which is what the queueing job compares against. */
-export const WEEKDAY_LABELS = [
-  { value: 0, short: 'S', long: 'Sunday' },
-  { value: 1, short: 'M', long: 'Monday' },
-  { value: 2, short: 'T', long: 'Tuesday' },
-  { value: 3, short: 'W', long: 'Wednesday' },
-  { value: 4, short: 'T', long: 'Thursday' },
-  { value: 5, short: 'F', long: 'Friday' },
-  { value: 6, short: 'S', long: 'Saturday' },
-] as const;
-
-/** "Every day", "Weekdays", or a list. Shorter to read than seven letters on a screen. */
-export function describeWeekdays(weekdays: readonly number[]): string {
-  const sorted = [...weekdays].sort((a, b) => a - b);
-  if (sorted.length === 7) return 'Every day';
-  if (sorted.join(',') === '1,2,3,4,5') return 'Weekdays';
-  if (sorted.join(',') === '0,6') return 'Weekends';
-  return sorted
-    .map((day) => WEEKDAY_LABELS.find((label) => label.value === day)?.long ?? '')
-    .filter(Boolean)
-    .join(', ');
-}
+/*
+ * Re-exported from the shared package, where they moved once activity schedules needed them too.
+ *
+ * Kept exported from here so the reminder components' imports did not all have to change, and because this is
+ * still the natural place to look for them when working on reminders.
+ */
+export { WEEKDAY_LABELS, describeWeekdays } from '@fastr/shared';

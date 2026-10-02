@@ -11,6 +11,8 @@ export * from './plans.js';
 export * from './stages.js';
 export * from './activities.js';
 export * from './schemas.js';
+export * from './weekdays.js';
+export * from './occurrences.js';
 export * from './time.js';
 export * from './streaks.js';
 export * from './units.js';

@@ -53,6 +53,8 @@ const emptyExport: FastrExport = {
   waterEntries: [],
   dayNotes: [],
   reminders: [],
+  activities: [],
+  activityLog: [],
 };
 
 describe('CSV export (Req 16.1)', () => {

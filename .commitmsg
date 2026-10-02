@@ -1,60 +1,60 @@
-feat: derive, queue and cancel activity occurrences
+feat: validation, data layer, next-occurrence, export and import
 
-Tasks 5, 6, 7 and 10. The scheduling half, proved against real Postgres.
+Tasks 9, 11, 12 and 17. Everything but the screens.
 
-`activity_occurrences(from, to, as_of)` reduces both schedule shapes to a
-set of instants and writes nothing. Keeping it separate from the queueing
-function is the most useful decision here: it means a test can ask what a
-schedule produces on a given day in a given zone without anything being
-queued, claimed or delivered.
+The parity suite immediately earned itself. Zod accepted an `at` schedule
+carrying `intervalMinutes` while Postgres refused it on `schedule_shape`,
+because Zod strips unknown keys by default — exactly the asymmetric drift
+the suite exists to catch, found on its first run. Fixed by declaring the
+other shape's fields as `z.undefined().optional()`, which mirrors the
+CHECK precisely while staying tolerant of unrelated keys, since the same
+schema validates imported files.
 
-The `as_of` parameter exists for exactly one reason — the daylight-saving
-case. Without it the choices are mocking Postgres's clock or
-reimplementing the schedule arithmetic in the test, and the second only
-proves two implementations agree with each other. With it, the test asks
-the real function what a 09:00 London schedule produces either side of
-the 2026-03-29 transition and asserts one occurrence each day, 09:00 on
-the wall clock both times, and 09:00 UTC before against 08:00 UTC after.
-That last pair is what proves a conversion happened rather than a
-wall-clock string being stored and handed back.
+`nextOccurrence` in packages/shared duplicates the SQL deliberately: the
+activities list shows "next at 07:00" per row and the alternative is a
+round trip per render. Duplication is only survivable if something holds
+the copies together, so occurrenceParity.test.ts drives eight fixtures
+through both implementations in two zones — including both 2026 London
+daylight-saving transitions — and asserts identical instants. Nairobi is
+in there precisely because it never changes its clocks, so agreement
+cannot be an accident of both being wrong the same way.
 
-Three local days are generated per schedule, not one. A window the user
-thinks of as "today" can straddle `from_at` in UTC, and 00:15 local is a
-different UTC date from the same user's 23:45. Generating yesterday,
-today and tomorrow and filtering by the requested range is the simple way
-to be right at every offset.
+The TypeScript side finds the instant for a wall-clock time by probing
+and correcting rather than by offset arithmetic, because across a DST
+change the offset the answer needs is not the offset the guess had. Two
+passes settle it.
 
-`queue_due_activities()` runs every 15 minutes with a five-minute
-look-back and a twenty-minute lookahead, so consecutive runs see the same
-occurrence deliberately. That is only safe because
-notifications_unique_per_occurrence makes the insert idempotent — the
-guarantee is in the schema, so rewriting this function cannot lose it. A
-test calls it four times and asserts the row count does not grow.
+describeWeekdays and WEEKDAY_LABELS moved to packages/shared. Two copies
+would drift in the worst way available: the UI promising "Weekdays" while
+the scheduler queues Sunday.
 
-Cancellation mirrors sync_fast_notifications: when the thing a
-notification describes changes, the pending queue is wrong and is
-cancelled, not corrected. Requeueing is left to the next run rather than
-done in the trigger, because recomputing occurrences there would put the
-schedule arithmetic in a second place. Triggers are scoped to the columns
-that move the time, so renaming a custom activity does not drop a
-reminder due in the next quarter hour. A time-zone change cancels that
-user's pending rows, which is what stops someone who flies to London
-getting yesterday's queue at the wrong local time.
+Water completions do not go to activity_log. They write a water_entries
+row through the existing water feature, because water already has a goal,
+a daily total and a UI built on that table — two records of how much
+someone drank would surface as the goal not moving when they log a glass
+from a notification.
 
-One thing the tests caught immediately: the queue function returned 11
-where the test expected 1, because `resetUserData` did not know about the
-new tables and rows accumulated between cases. Cleanup now has its own
-ordered list, separate from USER_TABLES, because it must include
-activity_schedules — which cannot be in the generic RLS suite at all,
-since a schedule needs a parent activity and there is no minimal
-standalone row for it.
+Export and import came forward from task 17 because `.default([])` makes
+the parsed type require the new keys, so typecheck demanded it. The keys
+are optional on the way in: every export already downloaded has no
+`activities` key, and rejecting those files would make this a breaking
+change for exactly the users careful enough to keep a backup. Tested
+first and explicitly.
 
-So activity_schedules gets its own RLS cases, and they cover the one
-thing no other table needs: it has a denormalised user_id that RLS trusts
-and a trigger owns. A test inserts a forged user_id and asserts the
-trigger overwrote it, then that the row is invisible to the user it was
-forged onto. Without that trigger a client could file a schedule under a
-stranger's id, invisible to its real owner, queueing notifications
-attributed to someone else.
+import_fastr_export is replaced wholesale rather than gaining a sibling,
+because the point of it is that an import is one transaction — a second
+call could succeed after the fasts failed. Activities are inserted in a
+loop since each schedule needs the id of the row just created, and the
+export carries no database ids at all, which is what lets a file be
+imported into a different account. The 20-activity limit still applies
+and fails the whole file: silently dropping the twenty-first would leave
+the user with no way to know what was lost.
 
-189 database tests pass.
+fastr_user_row_counts had to be dropped rather than replaced — `create or
+replace view` cannot insert columns mid-list and fails with "cannot
+change name of view column". The new counts belong beside the other user
+tables, not tacked on after `profiles`, because that view is how account
+deletion is proved and a table missing from it is a cascade nobody
+checked.
+
+682 tests pass.

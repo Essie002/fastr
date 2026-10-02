@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { CUSTOM_STEP_MINUTES, MAX_GOAL_MINUTES, MIN_GOAL_MINUTES, PLANS } from './plans.js';
+import { ACTIVITY_TYPES } from './activities.js';
 
 /**
  * Zod schemas for every write the app performs. Requirement 18.6.
@@ -144,6 +145,145 @@ export const pushSubscriptionSchema = z.object({
   userAgent: z.string().max(500).optional(),
 });
 
+/* -------------------------------------------------------------------------- */
+/* Activities                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export const MIN_ACTIVITY_MINUTES = 1;
+export const MAX_ACTIVITY_MINUTES = 480;
+export const MIN_ACTIVITY_INTERVAL_MINUTES = 15;
+export const MAX_ACTIVITY_INTERVAL_MINUTES = 720;
+export const MAX_ACTIVITIES = 20;
+
+const activityTypeKeys = ACTIVITY_TYPES.map((type) => type.key) as [string, ...string[]];
+
+/** `HH:MM`, the same shape the reminders table uses. */
+const wallClockSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Use a time like 07:00.');
+
+const weekdaysSchema = z
+  .array(z.number().int().min(0).max(6))
+  .min(1, 'Pick at least one day.')
+  .max(7);
+
+/** Minutes since midnight, for comparing two `HH:MM` strings without parsing dates. */
+function minutesOfDay(value: string): number {
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours! * 60 + minutes!;
+}
+
+/**
+ * An activity, named exactly once.
+ *
+ * The `superRefine` mirrors the `activity_named_once` CHECK constraint. Both exist on purpose: this one
+ * produces a message a user can act on, and the constraint is the one that is actually true — a client is not
+ * the only thing that can write to this table.
+ */
+export const activitySchema = z
+  .object({
+    typeKey: z.enum(activityTypeKeys).nullable(),
+    customLabel: z.string().trim().min(1).max(40).nullable(),
+    durationMinutes: z.number().int().min(MIN_ACTIVITY_MINUTES).max(MAX_ACTIVITY_MINUTES),
+    notifyEnd: z.boolean(),
+    enabled: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    const hasType = value.typeKey !== null;
+    const hasLabel = value.customLabel !== null && value.customLabel.trim().length > 0;
+
+    if (hasType && hasLabel) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['customLabel'],
+        message: 'Choose a preset or give your own name, not both.',
+      });
+    }
+    if (!hasType && !hasLabel) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['typeKey'],
+        message: 'Pick an activity, or give your own name.',
+      });
+    }
+  });
+
+/**
+ * A schedule, in one of two shapes.
+ *
+ * A discriminated union rather than one object with everything optional, so the type itself refuses the
+ * nonsense combinations — a `kind: 'at'` with an interval is not a validation failure, it is unrepresentable.
+ * That mirrors the `schedule_shape` CHECK, which does the same job for anything that reaches the database by
+ * another route.
+ */
+export const activityScheduleSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('at'),
+    localTime: wallClockSchema,
+    weekdays: weekdaysSchema,
+    enabled: z.boolean(),
+    /*
+     * The other shape's fields, explicitly forbidden rather than merely absent.
+     *
+     * Zod strips unknown keys by default, so without these an `at` schedule carrying `intervalMinutes`
+     * parsed cleanly — and then Postgres refused it on `schedule_shape`, which is precisely the drift the
+     * parity test exists to catch. It did.
+     *
+     * `z.undefined()` rather than `.strict()`: it mirrors the CHECK constraint exactly, forbidding the
+     * three fields that conflict while leaving the schema tolerant of unrelated keys, which matters because
+     * this same schema validates imported files.
+     */
+    windowStart: z.undefined().optional(),
+    windowEnd: z.undefined().optional(),
+    intervalMinutes: z.undefined().optional(),
+  }),
+  z
+    .object({
+      kind: z.literal('every'),
+      windowStart: wallClockSchema,
+      windowEnd: wallClockSchema,
+      localTime: z.undefined().optional(),
+      intervalMinutes: z
+        .number()
+        .int()
+        .min(MIN_ACTIVITY_INTERVAL_MINUTES)
+        .max(MAX_ACTIVITY_INTERVAL_MINUTES),
+      weekdays: weekdaysSchema,
+      enabled: z.boolean(),
+    })
+    .superRefine((value, ctx) => {
+      const span = minutesOfDay(value.windowEnd) - minutesOfDay(value.windowStart);
+
+      if (span <= 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['windowEnd'],
+          message: 'The end time has to be after the start time.',
+        });
+        return;
+      }
+
+      // Requirement 3.2. A window shorter than its interval fires once, which is not what "every two
+      // hours" means. Refused rather than silently degraded into a single daily reminder.
+      if (span < value.intervalMinutes) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['intervalMinutes'],
+          message: 'The window is shorter than the interval, so this would only ever fire once.',
+        });
+      }
+    }),
+]);
+
+/** A recorded completion. */
+export const activityLogSchema = z.object({
+  label: z.string().trim().min(1).max(40),
+  typeKey: z.enum(activityTypeKeys).nullable(),
+  occurredAt: instantSchema,
+  // Nullable: an unplanned walk logged after the fact may have no duration worth claiming, and a required
+  // number would be invented. 1440 is a day, past which this is a typing error rather than a duration.
+  minutes: z.number().int().min(1).max(1440).nullable(),
+  note: z.string().max(280).nullable(),
+});
+
 /** The shape of a Fastr export, and therefore of an import. Requirement 16.2 and 16.3. */
 export const exportSchema = z.object({
   version: z.literal(1),
@@ -165,6 +305,25 @@ export const exportSchema = z.object({
   waterEntries: z.array(z.object({ loggedAt: instantSchema, ml: z.number().int() })),
   dayNotes: z.array(dayNoteSchema),
   reminders: z.array(reminderSchema),
+
+  /*
+   * Optional, and that is Requirement 12.6: an export taken before activities existed has no such keys, and
+   * it must still import. Defaulting to an empty array rather than making them required means an old file
+   * round-trips without the import function special-casing a version.
+   */
+  activities: z
+    .array(
+      z.object({
+        typeKey: z.string().nullable(),
+        customLabel: z.string().nullable(),
+        durationMinutes: z.number().int(),
+        notifyEnd: z.boolean(),
+        enabled: z.boolean(),
+        schedules: z.array(activityScheduleSchema).default([]),
+      }),
+    )
+    .default([]),
+  activityLog: z.array(activityLogSchema).default([]),
 });
 
 export type StartFastInput = z.infer<typeof startFastSchema>;
@@ -176,4 +335,7 @@ export type WaterEntryInput = z.infer<typeof waterEntrySchema>;
 export type DayNoteInput = z.infer<typeof dayNoteSchema>;
 export type ReminderInput = z.infer<typeof reminderSchema>;
 export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
+export type ActivityInput = z.infer<typeof activitySchema>;
+export type ActivityScheduleInput = z.infer<typeof activityScheduleSchema>;
+export type ActivityLogInput = z.infer<typeof activityLogSchema>;
 export type FastrExport = z.infer<typeof exportSchema>;
