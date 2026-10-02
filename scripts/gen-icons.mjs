@@ -20,9 +20,15 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'packages', 'web', 'public', 'icons');
 
-/** Matches --accent and --bg in the light theme. */
-const ACCENT = [31, 111, 74];
-const BACKGROUND = [247, 247, 245];
+/*
+ * The dark theme's `--bg` and `--accent`: plum ground, mango ring.
+ *
+ * The dark pair rather than the light one, even though light is the default theme. A home-screen icon sits on
+ * the user's wallpaper, not on the app's background, so what matters is that it holds its own shape against an
+ * arbitrary photo — and a cream icon disappears into a pale one.
+ */
+const ACCENT = [255, 176, 32];
+const BACKGROUND = [36, 16, 51];
 
 function crc32(buffer) {
   let crc = 0xffffffff;

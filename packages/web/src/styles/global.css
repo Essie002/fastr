@@ -22,20 +22,34 @@ html {
 
 body {
   margin: 0;
-  background: var(--bg);
+  /*
+    The glow sits over the flat colour and is fixed, so scrolling a long history does not drag the light
+    source down the page with it. `--page-glow` is two transparent radial gradients, so the solid `--bg`
+    underneath is still what determines the contrast ratios the palette is checked against.
+  */
+  background: var(--page-glow), var(--bg);
+  background-attachment: fixed;
+  background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: var(--text-base);
+  /* Nunito is a touch light at 400; 500 is what makes it read as warm rather than thin. */
+  font-weight: 500;
   line-height: 1.5;
   /* Keeps content clear of a notch and the home-screen indicator on an installed PWA. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  min-height: 100vh;
 }
 
 h1,
 h2,
 h3 {
   margin: 0 0 var(--space-3);
-  line-height: 1.2;
+  /* Baloo is rounded and wide; the negative tracking stops a heading from sprawling. */
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
 }
 h1 {
   font-size: var(--text-xl);
@@ -46,6 +60,28 @@ h2 {
 
 p {
   margin: 0 0 var(--space-3);
+}
+
+/*
+ * Links, which had no rule at all until the palette made it obvious.
+ *
+ * The four bare `<Link>`s in the app were rendering in the user agent's default blue. On the old near-white
+ * background that was merely ugly; on a plum one it is roughly 1.5:1 and effectively invisible, and it was
+ * already failing in the old dark theme where nobody had looked. `--accent` is the fix rather than a new
+ * colour because `--accent` on `--bg` and on `--surface` is already one of the pairs contrast.test.ts
+ * enforces, so links inherit that guarantee instead of needing their own.
+ *
+ * The underline stays. Requirement 19.3 forbids colour as the only signal, and a link in a paragraph has
+ * nothing else to distinguish it.
+ */
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--accent-strong);
 }
 
 /* Requirement 19.1. A visible focus indicator everywhere, and never removed. */
@@ -121,7 +157,9 @@ p {
   position: sticky;
   bottom: 0;
   background: var(--surface);
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--border);
+  /* Lifts the bar off the content it sits over, so a long list scrolling under it does not look merged. */
+  box-shadow: var(--shadow-lift);
   /* Clears the home-screen indicator on an installed PWA. */
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -160,7 +198,8 @@ p {
  */
 .nav__link[aria-current='page'] {
   color: var(--accent);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 800;
 }
 .nav__link[aria-current='page']::before {
   content: '';
@@ -192,7 +231,7 @@ p {
     align-self: start;
     height: 100dvh;
     border-top: none;
-    border-inline-end: 1px solid var(--border);
+    border-inline-end: 2px solid var(--border);
     padding: var(--space-5) var(--space-3);
   }
 
@@ -236,7 +275,7 @@ p {
   gap: var(--space-3);
   margin-bottom: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
 }
@@ -262,10 +301,11 @@ p {
  * -------------------------------------------------------------------------- */
 
 .card {
-  padding: var(--space-4);
+  padding: var(--space-5);
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  /* 2px rather than a hairline. A thin border on a rounded corner reads as a dialog box. */
+  border: 2px solid var(--border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
 }
 
@@ -295,7 +335,7 @@ p {
   margin: var(--space-8) auto;
   padding: var(--space-5);
   background: var(--surface);
-  border: 1px solid var(--danger);
+  border: 2px solid var(--danger);
   border-radius: var(--radius-lg);
 }
 
@@ -319,6 +359,9 @@ p {
   text-align: center;
   font-size: var(--text-2xl);
   margin-bottom: var(--space-5);
+  /* The one place the wordmark gets to behave like a wordmark. */
+  letter-spacing: -0.02em;
+  color: var(--accent);
 }
 
 .auth__note {
@@ -333,18 +376,19 @@ p {
 .field__label {
   display: block;
   margin-bottom: var(--space-1);
+  font-family: var(--font-display);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .field__input {
   display: block;
   width: 100%;
   min-height: var(--touch-target);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
   background: var(--bg);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-md);
   /* 1rem, because iOS Safari zooms the page when a focused input is under 16px. */
   font: inherit;
@@ -362,25 +406,54 @@ p {
   font-size: var(--text-xs);
 }
 
+/*
+ * Chunky, pressable buttons.
+ *
+ * The hard bottom shadow and the press that removes it is the whole trick: it makes a button feel physical,
+ * which is most of the difference between an app and a form. The press is `translateY` to exactly the shadow
+ * offset, so the button appears to sit down onto the page rather than merely shift.
+ *
+ * `transform` is not animated under `prefers-reduced-motion` — the blanket rule near the top of this file
+ * cuts every transition to 0.01ms — so the press still happens, it just arrives instantly. That is the right
+ * outcome: the affordance is the displacement, not the easing.
+ */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   min-height: var(--touch-target);
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-full);
   font: inherit;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  /* Some buttons are anchors (`<Link className="button">`), which the global `a` rule underlines. */
+  text-decoration: none;
+  box-shadow: var(--shadow-chunk);
   transition:
-    background var(--transition),
-    opacity var(--transition);
+    transform var(--transition) var(--ease-pop),
+    box-shadow var(--transition) var(--ease-out),
+    filter var(--transition),
+    background var(--transition);
+}
+
+.button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow: 0 0 0 var(--chunk-edge);
 }
 
 .button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: var(--shadow-chunk-sm);
 }
 
 .button--primary {
@@ -395,12 +468,20 @@ p {
 .button--secondary {
   background: var(--surface);
   color: var(--text);
-  border-color: var(--border);
+  box-shadow:
+    inset 0 0 0 2px var(--border),
+    var(--shadow-chunk);
+}
+
+.button--secondary:active:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 2px var(--border),
+    0 0 0 var(--chunk-edge);
 }
 
 .button--danger {
   background: var(--danger);
-  color: #ffffff;
+  color: var(--danger-ink);
 }
 
 /*
@@ -412,15 +493,27 @@ p {
   padding: var(--space-1) 0;
   background: none;
   color: var(--accent);
-  font-weight: 500;
+  /* Body type, not display: this reads as prose, and it opts out of the chunky edge and the press with it. */
+  font-family: var(--font-sans);
+  font-weight: 600;
   text-decoration: underline;
+  box-shadow: none;
+}
+
+.button--link:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.button--link:disabled {
+  box-shadow: none;
 }
 
 .form-error {
   margin: 0;
   padding: var(--space-2) var(--space-3);
   background: var(--danger-soft);
-  border: 1px solid var(--danger);
+  border: 2px solid var(--danger);
   border-radius: var(--radius-md);
   color: var(--text);
   font-size: var(--text-sm);
@@ -478,7 +571,7 @@ select.field__input {
   padding: var(--space-4);
   background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-lg);
   font: inherit;
   text-align: left;
@@ -679,7 +772,7 @@ select.field__input {
   gap: var(--space-1);
   padding: var(--space-1);
   background: var(--surface-sunken);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
 }
 
 .segmented__option {
@@ -691,15 +784,16 @@ select.field__input {
   background: none;
   color: var(--text-muted);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
   font: inherit;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
   cursor: pointer;
 }
 
 .segmented__option--on {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--accent);
+  color: var(--text-on-accent);
   box-shadow: var(--shadow-sm);
 }
 
@@ -720,20 +814,25 @@ select.field__input {
   padding: var(--space-3) var(--space-4);
   background: var(--surface);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color var(--transition),
+    transform var(--transition) var(--ease-out);
 }
 
 .history__item:hover {
   border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .history__day {
   grid-area: day;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-weight: 700;
 }
 
 .history__duration {

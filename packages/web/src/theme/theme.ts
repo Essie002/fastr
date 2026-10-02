@@ -11,8 +11,13 @@ import type { Theme } from '@fastr/shared';
 
 export const THEME_STORAGE_KEY = 'fastr.theme';
 
-/** The two colours the browser paints outside the app: status bar, overscroll. */
-export const THEME_COLORS = { light: '#f7f7f5', dark: '#111312' } as const;
+/**
+ * The two colours the browser paints outside the app: status bar, overscroll.
+ *
+ * These are a third copy of `--bg` from `styles/tokens.css`, which the stylesheet cannot hand to
+ * JavaScript before paint. `themeBoot.test.ts` reads the stylesheet and asserts all three agree.
+ */
+export const THEME_COLORS = { light: '#fdf2e6', dark: '#241033' } as const;
 
 export type ResolvedTheme = 'light' | 'dark';
 

@@ -33,6 +33,7 @@
   document.documentElement.setAttribute('data-theme', resolved);
 
   // Keep the phone's status bar in step with the app, or a dark app sits under a light bar.
+  // These two must match `--bg` for each theme in src/styles/tokens.css.
   var meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#111312' : '#f7f7f5');
+  if (meta) meta.setAttribute('content', resolved === 'dark' ? '#241033' : '#fdf2e6');
 })();

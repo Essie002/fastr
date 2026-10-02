@@ -7,6 +7,12 @@ import { AuthProvider } from './auth/AuthProvider.js';
 import { ThemeProvider } from './theme/ThemeProvider.js';
 import { createQueryClient } from './data/queryClient.js';
 import { CONFIG_HELP, ConfigError, readConfig } from './config.js';
+// Rounded, friendly type. Self-hosted rather than fetched from a CDN: Fastr is offline-first and
+// installable, and a font that needs the network would leave the installed app rendering in Helvetica
+// on exactly the mornings it is most likely to be opened without a connection.
+import '@fontsource/baloo-2/700.css';
+import '@fontsource/baloo-2/800.css';
+import '@fontsource-variable/nunito';
 import './styles/global.css';
 
 /**

@@ -1,14 +1,20 @@
 /*
- * Colour and spacing tokens. Requirement 14.
+ * Design tokens. Requirement 14.
  *
- * Custom properties rather than a JavaScript theme object, so switching theme is one attribute change
- * on <html> and costs no re-render. It is also what lets the boot script in index.html apply a theme
- * before React exists.
+ * The look is warm on purpose, borrowed wholesale from Rally: a deep plum ground, sunset accents, generous
+ * radii, and buttons with a hard bottom edge so they feel pressable. Cool greys and hairline borders read as
+ * software, and the one thing a fasting app should not feel like at 6am is a form.
  *
- * Every text-on-background pair below is checked arithmetically against WCAG 2.1 AA by
- * src/theme/contrast.test.ts. That test exists because axe derives contrast from rendered pixels and
- * jsdom does not paint, so axe's contrast rules are disabled in this project — which would otherwise
- * leave the criterion most easily broken by a design tweak as the only one nothing verifies.
+ * Custom properties rather than a JavaScript theme object, so switching theme is one attribute change on
+ * <html> and costs no re-render. It is also what lets the boot script in index.html apply a theme before
+ * React exists.
+ *
+ * Two constraints shaped the palette. Rally is dark-only and could pick saturated accents freely; Fastr has
+ * a light theme too, and mango on cream is unreadable — so each theme carries its own accent, tuned to its
+ * own ground, rather than sharing one. And every text-on-background pair below is checked arithmetically
+ * against WCAG 2.1 AA by src/theme/contrast.test.ts. That test exists because axe derives contrast from
+ * rendered pixels and jsdom does not paint, so axe's contrast rules are disabled in this project — which
+ * would otherwise leave the criterion most easily broken by a design tweak as the only one nothing verifies.
  */
 
 :root {
@@ -21,16 +27,21 @@
   --space-6: 2rem;
   --space-8: 3rem;
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  /* Generous radii. Rounded corners are most of what separates playful from corporate. */
+  --radius-sm: 0.625rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
   --radius-full: 999px;
 
   /* Requirement 15.5. Nothing tappable may be smaller than this. */
   --touch-target: 2.75rem; /* 44px */
 
+  /* Rounded and friendly for anything that shouts, humanist for anything read in quantity. */
+  --font-display: 'Baloo 2', 'Trebuchet MS', ui-rounded, system-ui, sans-serif;
   --font-sans:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    'Nunito Variable', Nunito, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
   /* Tabular figures, so a ticking timer does not shift width every second. */
   --font-numeric: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
 
@@ -42,56 +53,89 @@
   --text-2xl: 2rem;
   --text-timer: clamp(2.5rem, 12vw, 4rem);
 
+  /*
+    Chunky offset shadows rather than soft blurs. A hard bottom edge makes a button look pressable, and
+    removing it on :active is the whole trick — it is the cheapest way to make an interface feel physical.
+  */
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06);
   --shadow-md: 0 4px 16px rgb(0 0 0 / 0.1);
+  --shadow-chunk: 0 5px 0 var(--chunk-edge);
+  --shadow-chunk-sm: 0 3px 0 var(--chunk-edge);
+  --shadow-lift: 0 18px 40px rgb(0 0 0 / 0.28);
 
   --transition: 160ms ease;
+  /* Overshoot. Things that bounce very slightly feel alive. */
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Light. The default, and what the boot script falls back to. */
+/*
+ * Light. The default, and what the boot script falls back to.
+ *
+ * Warm cream rather than white, and plum ink rather than near-black, so the light theme is the same evening
+ * palette turned up rather than a different design. The accent is a deep raspberry: it is the one place the
+ * light theme cannot follow Rally, because mango at 4.5:1 on cream does not exist.
+ */
 :root,
 [data-theme='light'] {
-  --bg: #f7f7f5;
-  --surface: #ffffff;
-  --surface-sunken: #eeeeea;
-  --border: #d8d8d2;
+  --bg: #fdf2e6;
+  --surface: #fffaf4;
+  --surface-sunken: #f6e5d2;
+  --border: #e0bf9c;
 
-  --text: #16181a; /* 15.8:1 on --bg */
-  --text-muted: #5c6066; /* 6.1:1  on --bg */
-  --text-on-accent: #ffffff;
+  --text: #2a1033; /* 15.6:1 on --bg */
+  --text-muted: #6d4a5f; /* 6.8:1  on --bg */
+  --text-on-accent: #fff6ef; /* 6.5:1  on --accent */
 
-  --accent: #1f6f4a; /* 4.9:1  on --bg  */
-  --accent-strong: #185a3c;
-  --accent-soft: #e2efe8;
+  --accent: #a81e5c; /* 6.3:1  on --bg */
+  --accent-strong: #87164a;
+  --accent-soft: #fae0ea;
 
-  --warn: #8a5300; /* 4.8:1  on --bg */
-  --warn-soft: #fbf0dd;
-  --danger: #a8231f; /* 5.6:1  on --bg */
-  --danger-soft: #fbe6e5;
+  --warn: #8a4a00; /* 6.0:1  on --warn-soft */
+  --warn-soft: #fdeed6;
+  --danger: #ad2026; /* 5.7:1  on --danger-soft */
+  --danger-soft: #fce3e2;
+  --danger-ink: #fff6ef; /* text on a destructive button */
 
-  --ring-track: #deded8;
+  --ring-track: #efd9c2;
   --ring-fill: var(--accent);
+
+  /* The hard edge under a pressable thing. Warmer and softer than the dark theme's. */
+  --chunk-edge: rgb(110 60 30 / 0.22);
+  /* A barely-there warm wash, so the page is not a flat rectangle of one colour. */
+  --page-glow:
+    radial-gradient(120% 90% at 12% -10%, #fff0f6 0%, transparent 55%),
+    radial-gradient(100% 80% at 100% 0%, #fff2dd 0%, transparent 50%);
 }
 
+/* Dark. Rally's palette, essentially unchanged: plum ground, mango accent. */
 [data-theme='dark'] {
-  --bg: #111312;
-  --surface: #1b1e1d;
-  --surface-sunken: #0c0e0d;
-  --border: #333836;
+  --bg: #241033;
+  --surface: #35174a;
+  --surface-sunken: #170a22;
+  --border: #7b44a0;
 
-  --text: #eef0ee; /* 15.4:1 on --bg */
-  --text-muted: #a2a8a4; /* 7.2:1  on --bg */
-  --text-on-accent: #07120c;
+  --text: #fff6ef; /* 16.4:1 on --bg */
+  --text-muted: #cbb2df; /* 9.2:1  on --bg */
+  --text-on-accent: #3d2000; /* 8.2:1  on --accent */
 
-  --accent: #5fc98f; /* 8.5:1  on --bg */
-  --accent-strong: #7ad6a4;
-  --accent-soft: #17291f;
+  --accent: #ffb020; /* 9.6:1  on --bg */
+  --accent-strong: #ffc94d;
+  --accent-soft: #3a1f12;
 
-  --warn: #e0a85c; /* 8.4:1  on --bg */
-  --warn-soft: #2a2114;
-  --danger: #f08b86; /* 7.6:1  on --bg */
-  --danger-soft: #2c1817;
+  --warn: #ffc357; /* 8.7:1  on --warn-soft */
+  --warn-soft: #3a2a10;
+  --danger: #ff8a93; /* 7.1:1  on --danger-soft */
+  --danger-soft: #3d131c;
+  /* Dark `--danger` is a light coral, so the destructive button takes dark ink rather than white. */
+  --danger-ink: #47070d;
 
-  --ring-track: #2c312f;
+  --ring-track: #46205e;
   --ring-fill: var(--accent);
+
+  --chunk-edge: rgb(0 0 0 / 0.34);
+  /* The warm room glow, straight from Rally. This is most of what makes the dark theme feel like evening. */
+  --page-glow:
+    radial-gradient(120% 90% at 15% -10%, #5a2a76 0%, transparent 55%),
+    radial-gradient(100% 80% at 100% 0%, #8c2f6b 0%, transparent 50%);
 }

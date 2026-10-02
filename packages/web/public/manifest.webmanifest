@@ -6,8 +6,8 @@
   "scope": "/fastr/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#f7f7f5",
-  "theme_color": "#f7f7f5",
+  "background_color": "#fdf2e6",
+  "theme_color": "#fdf2e6",
   "icons": [
     {
       "src": "/fastr/icons/icon-192.png",

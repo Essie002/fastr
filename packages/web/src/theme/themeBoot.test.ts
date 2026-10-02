@@ -21,6 +21,16 @@ const script = readFileSync(
   'utf8',
 );
 
+const tokens = readFileSync(join(import.meta.dirname, '..', 'styles', 'tokens.css'), 'utf8');
+
+/** `--bg` out of one theme block in tokens.css. The colour the browser chrome has to match. */
+function background(selector: string): string {
+  const block = new RegExp(`${selector}[^{]*\\{([^}]*)\\}`).exec(tokens)?.[1];
+  const value = block && /--bg:\s*(#[0-9a-f]{6})/i.exec(block)?.[1];
+  if (!value) throw new Error(`No --bg found for ${selector}`);
+  return value;
+}
+
 describe('public/theme-boot.js', () => {
   it('uses the same storage key as the React side', () => {
     expect(script).toContain(`'${THEME_STORAGE_KEY}'`);
@@ -29,6 +39,14 @@ describe('public/theme-boot.js', () => {
   it('uses the same chrome colours', () => {
     expect(script).toContain(THEME_COLORS.dark);
     expect(script).toContain(THEME_COLORS.light);
+  });
+
+  it('paints chrome the same colour as the page background', () => {
+    // The third copy. A re-skin that changes `--bg` and forgets these leaves a strip of the old palette
+    // around the installed app — visible only on a phone, which is where it is least likely to be looked
+    // for. Checked against the stylesheet rather than against a literal, so the stylesheet stays the source.
+    expect(THEME_COLORS.light).toBe(background("\\[data-theme='light'\\]"));
+    expect(THEME_COLORS.dark).toBe(background("\\[data-theme='dark'\\]"));
   });
 
   it('recognises all three stored values', () => {
