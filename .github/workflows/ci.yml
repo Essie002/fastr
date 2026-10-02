@@ -49,13 +49,18 @@ jobs:
 
       # The runner has Docker, which is what the CLI wants. The local development story is Podman, for a machine where
       # Docker Desktop is not permitted; both work, and nothing here depends on which.
+      #
+      # Through the wrapper, not `npx supabase` directly. `config.toml` reads site_url and the redirect
+      # allow-list from the environment, because those are the two settings that genuinely differ between
+      # this stack and the hosted project, and `scripts/supabase.mjs` is where their local defaults live.
+      # Calling the CLI directly here is how CI ends up starting a stack with an empty site_url.
       - name: Start Supabase
-        run: npx supabase start
+        run: node scripts/supabase.mjs start
 
       # Separate from `start`, because a stack that comes up and a migration history that applies cleanly are two
       # different claims and a combined step hides which one failed.
       - name: Apply every migration from scratch
-        run: npx supabase db reset
+        run: node scripts/supabase.mjs db reset
 
       # Three generated artefacts share one source of truth: the stage list in packages/shared. If any has not been
       # regenerated, this leaves the tree dirty and the build fails — which turns forgetting into a red build rather

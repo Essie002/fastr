@@ -55,19 +55,19 @@ jobs:
       - name: Link the project
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: npx supabase link --project-ref ${{ vars.SUPABASE_PROJECT_REF }}
+        run: node scripts/supabase.mjs link --project-ref ${{ vars.SUPABASE_PROJECT_REF }}
 
       # Printed before anything is applied, so the log contains a record of what this deploy changed. Worth having when
       # working out what happened to a database weeks later.
       - name: Show what will change
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: npx supabase migration list
+        run: node scripts/supabase.mjs migration list
 
       - name: Apply migrations
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: npx supabase db push
+        run: node scripts/supabase.mjs db push
 
       # Functions after migrations, because the sender calls claim_due_notifications: deployed first, it would run
       # against a database without that function.
@@ -77,9 +77,9 @@ jobs:
         run: |
           # verify_jwt stays off for the sender only; it is called by cron, which has no user. The setting lives in
           # config.toml and the CLI reads it from there.
-          npx supabase functions deploy send-notifications
-          npx supabase functions deploy delete-account
-          npx supabase functions deploy import-data
+          node scripts/supabase.mjs functions deploy send-notifications
+          node scripts/supabase.mjs functions deploy delete-account
+          node scripts/supabase.mjs functions deploy import-data
 
       - name: Remind what is not automated
         run: |

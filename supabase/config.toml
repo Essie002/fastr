@@ -265,10 +265,21 @@ enable_confirmations = false
 secure_password_change = true
 # The minimum gap between two password-reset or confirmation emails to the same address.
 #
-# Environment-driven for the same reason as the URLs above: one second is what makes a reset flow
-# testable by hand against Inbucket, and one second in production is an email-flooding tool pointed at
-# whichever address an attacker types. The wrapper defaults it to 1s locally; the push sets 1m0s.
-max_frequency = "env(FASTR_EMAIL_MAX_FREQUENCY)"
+# A literal, and deliberately the production-safe value rather than the convenient one.
+#
+# This was briefly `env(FASTR_EMAIL_MAX_FREQUENCY)`, to get 1s locally and a minute in production the
+# way `site_url` does. That does not work: `env()` is only substituted into *string* fields, and the
+# CLI parses this one as a duration first, so the stack refuses to start with
+#
+#   invalid config for auth.email.max_frequency: time: invalid duration "env(FASTR_EMAIL_MAX_FREQUENCY)"
+#
+# Since it has to be one value for both, it is the one that is safe in production: a one-second gap
+# there is an email-flooding tool pointed at whichever address an attacker types. The cost is that
+# testing a reset flow by hand against Inbucket means waiting a minute between attempts, which is a
+# far smaller problem — the seeded users have known passwords, so resets are rarely exercised locally.
+#
+# `[auth.rate_limit] email_sent` below is the real backstop either way; this just stops a burst.
+max_frequency = "1m0s"
 # Number of characters used in the email OTP. Eight rather than Supabase's default six: nothing in Fastr
 # sends an OTP today, so the only cost of the stronger value is that it is there if that ever changes.
 otp_length = 8

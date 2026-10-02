@@ -175,14 +175,17 @@ link fail.
     ```bash
     FASTR_SITE_URL=https://<your-site>.netlify.app \
     FASTR_CALLBACK_URL=https://<your-site>.netlify.app/auth/callback \
-    FASTR_EMAIL_MAX_FREQUENCY=1m0s \
       node scripts/supabase.mjs config push
     ```
 
-    Those three are read from the environment rather than written in `config.toml` because they are the settings that
+    Those two are read from the environment rather than written in `config.toml` because they are the settings that
     genuinely differ per deployment, and `config push` sends the whole file — a literal would either push `localhost`
-    to production or point local reset emails at the live site. `scripts/supabase.mjs` defaults all three to their
-    local values, so `npm run db:start` needs none of them. Run `config diff` first to see exactly what will change.
+    to production or point local reset emails at the live site. `scripts/supabase.mjs` defaults both to their local
+    values, so `npm run db:start` needs neither. Run `config diff` first to see exactly what will change.
+
+    Always go through `scripts/supabase.mjs` rather than `npx supabase`, for the same reason. Note that `env()` only
+    substitutes into string settings — `auth.email.max_frequency` is parsed as a duration and refuses to start with an
+    `env()` in it, so it is a literal set to the production-safe value.
 
 6. **Set the repository variables**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_VAPID_PUBLIC_KEY`,
 `SUPABASE_PROJECT_REF`. And, only if you want the manual **Deploy to Supabase** workflow, one secret,
