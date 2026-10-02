@@ -10,6 +10,9 @@
 # Netlify's own Git integration is deliberately not used. It would need the Netlify GitHub App granted access to a
 # private repository, and it would build on every push regardless of whether the tests passed — which is exactly
 # the gate this workflow exists to enforce.
+#
+# The upload goes through `scripts/deploy-netlify.mjs` rather than `netlify-cli`, because the CLI reads an npm
+# workspace as several candidate sites and refuses to deploy. See the script's header.
 
 name: Deploy to Netlify
 
@@ -90,7 +93,4 @@ jobs:
             echo "Set the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID repository secrets first."
             exit 1
           fi
-          npx --yes netlify-cli@17 deploy \
-            --dir packages/web/dist \
-            --prod \
-            --message "${{ github.sha }}"
+          node scripts/deploy-netlify.mjs
