@@ -34,6 +34,25 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}'],
           setupFiles: ['./src/test/setup.ts'],
           passWithNoTests: true,
+          /*
+           * Fixed configuration, so the suite does not read the developer's `packages/web/.env.local`.
+           *
+           * Vitest is Vite, so it loads that file and `import.meta.env.VITE_SUPABASE_URL` becomes
+           * whatever the local stack happens to be. Almost every test installs the Supabase stub and
+           * never touches this — but a React effect that fires after a test has cleared the stub falls
+           * through to `getSupabase()`, which reads the real config. With a `.env.local` present that
+           * silently succeeds; in CI, where there is none, it throws `ConfigError` and fails a test
+           * about the iPhone install prompt. The suite passed locally and failed in CI for a reason
+           * visible in neither place.
+           *
+           * `.invalid` is reserved by RFC 2606 and can never resolve, so a client built from this can
+           * be created but cannot reach anything — which is the point. The stub is still what every
+           * test asserts against; this only removes the machine-dependent fallback.
+           */
+          env: {
+            VITE_SUPABASE_URL: 'http://supabase.invalid',
+            VITE_SUPABASE_ANON_KEY: 'test-anon-key-not-a-real-one',
+          },
         },
       },
       {
