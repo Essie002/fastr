@@ -182,10 +182,11 @@ enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
-# Requirement 1.1: Fastr is invite-only. Accounts are created by the owner inviting an email
-# address, never by a visitor signing themselves up. Set to false locally as well as in the hosted
-# project, so local development cannot pass through a path production does not have.
-enable_signup = false
+# Requirement 1.1: anyone can create their own account. This flag is the real gate — the sign-up form
+# is only a form, and with this false Supabase rejects every `signUp` call regardless of what the UI
+# offers. Keep it true locally *and* in the hosted project, so local development exercises the same
+# path production has.
+enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -231,15 +232,26 @@ web3 = 30
 [auth.email]
 # Left ON, and the comment matters because turning it off looks like the right thing to do.
 #
-# This flag does not mean "let strangers register". It controls whether the email provider is
-# available at all, so setting it false disables email *sign-in* too and every login fails with
-# "Email logins are disabled". Invite-only is the top-level `[auth] enable_signup = false` above;
-# this one has to stay true or nobody can sign in, invited or not.
+# This flag does not mean "let strangers register" — that is the top-level `[auth] enable_signup`
+# above. It controls whether the email provider is available at all, so setting it false disables
+# email *sign-in* too and every login fails with "Email logins are disabled". It has to stay true
+# or nobody can sign in.
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
+#
+# Off, so signing up signs you straight in. The honest tradeoff: nothing stops someone registering
+# with an address that is not theirs. That costs the real owner of the address nothing here — a
+# Fastr account holds only the fasts you log yourself, and there is no shared data to leak into —
+# so an extra round trip through an inbox buys little and breaks a lot. Supabase's built-in mailer
+# is capped at two messages an hour (see `[auth.rate_limit] email_sent`), which with confirmations
+# on would make the third person to sign up in an hour unable to get in at all.
+#
+# Turn this on once real SMTP is configured in `[auth.email.smtp]`. The app already handles it: the
+# "Confirm your email address first" path exists in describeSignInError, and SignUp renders a
+# check-your-inbox screen when signUp returns a user with no session.
 enable_confirmations = false
 # Requirement 3.2: changing a password requires having signed in recently. Locally this matters
 # because it is the behaviour the settings screen has to handle, and a local stack that skipped it

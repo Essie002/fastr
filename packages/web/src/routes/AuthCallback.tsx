@@ -10,16 +10,17 @@ import {
 /**
  * Where an emailed link lands. The one route that will turn a URL into a session.
  *
- * Supabase sends invite and recovery links here with the tokens in the fragment. This reads them, adopts
- * the session, records *why* it exists, and forwards accordingly: an invite still needs a name and a
- * password, a recovery link needs a new password, anything else is just a signed-in user.
+ * Supabase sends invite, sign-up confirmation and recovery links here with the tokens in the fragment. This
+ * reads them, adopts the session, records *why* it exists, and forwards accordingly: an invite still needs
+ * a name and a password, a recovery link needs a new password, a confirmed sign-up needs to pick a plan,
+ * anything else is just a signed-in user.
  *
  * The fragment is read during the first render rather than in an effect. It is a pure read of a value that
  * cannot change under us, and doing it in an effect would mean setting state synchronously from one, which
  * costs an extra render and a lint suppression for no benefit.
  */
 
-type Destination = '/accept-invite' | '/reset-password' | '/' | null;
+type Destination = '/accept-invite' | '/reset-password' | '/plans' | '/' | null;
 
 export default function AuthCallback() {
   const { adoptSession } = useAuth();
@@ -55,7 +56,15 @@ export default function AuthCallback() {
         return;
       }
       setDestination(
-        origin === 'invite' ? '/accept-invite' : origin === 'recovery' ? '/reset-password' : '/',
+        origin === 'invite'
+          ? '/accept-invite'
+          : origin === 'recovery'
+            ? '/reset-password'
+            : // A confirmed sign-up already has its name and password; what it does not have is a plan,
+              // and the timer is useless without one. Everything else lands on the timer.
+              type === 'signup'
+              ? '/plans'
+              : '/',
       );
     });
   }, [adoptSession, parsed]);

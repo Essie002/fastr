@@ -228,6 +228,27 @@ describe('signed-out screens', () => {
     await screen.findByRole('heading', { level: 2, name: /reset your password/i });
     await expectNoAxeViolations(container);
   });
+
+  it('sign up has no violations', async () => {
+    installSupabaseStub({ session: null });
+    const { container } = renderApp(<App />, { route: '/signup' });
+    await screen.findByRole('heading', { level: 2, name: 'Create your account' });
+    await expectNoAxeViolations(container);
+  });
+
+  it('the check-your-inbox screen has no violations', async () => {
+    installSupabaseStub({ session: null, signUpNeedsConfirmation: true });
+    const { container } = renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    await screen.findByRole('heading', { level: 2, name: 'Check your inbox' });
+    await expectNoAxeViolations(container);
+  });
 });
 
 describe('keyboard operation (Req 19.1)', () => {

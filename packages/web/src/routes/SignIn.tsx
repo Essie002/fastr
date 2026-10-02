@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider.js';
 
 /**
- * Sign in, and asking for a password reset. Requirements 1.1, 2.1, 2.2, 2.8.
+ * Sign in, and asking for a password reset. Requirements 2.1, 2.2, 2.8.
  *
- * There is no sign-up form, and that is the feature: Fastr is invite-only (Requirement 1.1), so accounts
- * come from the owner inviting an address. A disabled or hidden sign-up form would imply one exists.
+ * Creating an account lives on its own route rather than as a third mode here. Sign-in and sign-up look
+ * almost identical and do opposite things, and a toggle between them is how people end up typing a new
+ * password into the sign-in form and being told their credentials are wrong.
  */
 
 interface LocationState {
@@ -112,7 +113,7 @@ export default function SignIn() {
           </button>
 
           <p className="muted auth__note">
-            Fastr is invite-only, so there is no sign-up here. Ask the owner for an invitation.
+            New to Fastr? <Link to="/signup">Create an account</Link>
           </p>
         </form>
       ) : (

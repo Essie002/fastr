@@ -73,23 +73,35 @@ Checked against current sources in September 2026:
 
 ## Requirements
 
-### Requirement 1: Invite-only accounts
+### Requirement 1: Creating an account
 
-**User Story:** As the owner, I want only people I invite to be able to create an account, so that a personal app on the
-public internet does not fill up with strangers.
+**User Story:** As someone who has just found Fastr, I want to create my own account and start tracking straight away, so that
+using it does not depend on asking anyone for permission.
+
+Nothing about this is risky in the way open sign-up usually is. Every row in the database belongs to exactly one user and is
+reachable only through that user's own JWT (Requirement 4), so a stranger signing up gains access to nothing except an empty
+account of their own. The cost of an unwanted account is a handful of rows; the cost of invite-only was that the app could not
+be shared with anyone without the owner's involvement.
 
 #### Acceptance Criteria
 
-1. Public sign-up SHALL be disabled in Supabase Auth. New accounts SHALL be created by the owner inviting an email address
-   from the Supabase dashboard or CLI.
-2. WHEN an invited person opens their invite link THEN the app SHALL let them set a display name and a password, and SHALL
-   sign them in.
+1. Public sign-up SHALL be enabled in Supabase Auth, and the app SHALL offer a sign-up form reachable from the sign-in screen.
+   The form SHALL collect a display name, an email address and a password.
+2. WHEN a visitor submits the sign-up form THEN the system SHALL create the account, SHALL create their profile row from the
+   display name and the browser's time zone, and SHALL sign them in.
 3. The system SHALL require a password of at least 10 characters, and SHALL enable Supabase Auth's leaked-password check if
    the project's plan provides it.
 4. Passwords SHALL be handled only by Supabase Auth. The app SHALL never store, log or send a password anywhere else.
 5. Before the account is usable, the app SHALL require the user to acknowledge the health notice (Requirement 17).
-6. The system SHALL record the user's time zone from the browser on first sign-in, editable later in settings.
-7. The README SHALL give step-by-step instructions for inviting a user, locally and in the hosted project.
+6. The system SHALL record the user's time zone from the browser at sign-up, editable later in settings.
+7. IF the email address already has an account THEN the app SHALL say so and point the visitor at the sign-in screen.
+8. The system SHALL also accept accounts created by the owner inviting an address from the Supabase dashboard, and WHEN an
+   invited person opens their invite link THEN the app SHALL let them set a display name and a password, and SHALL sign them
+   in.
+9. The owner SHALL be able to close sign-up again by turning off one Supabase setting, without a code change. IF sign-up is
+   closed THEN the form SHALL report that new accounts are closed rather than failing silently.
+10. The README SHALL give step-by-step instructions for both routes — a visitor signing themselves up, and the owner inviting
+    an address — locally and in the hosted project.
 
 ### Requirement 2: Sign in, sessions and sign out
 
@@ -421,8 +433,9 @@ laptops does not cost me an afternoon.
    since they are public by design.
 4. A separate, manually triggered workflow SHALL apply database migrations and deploy Edge Functions to the hosted Supabase
    project, using a Supabase access token stored as a GitHub secret in a protected environment.
-5. The README SHALL walk through the one-time setup: creating the Supabase project, enabling Cron and invite-only auth,
-   setting Edge Function secrets, generating VAPID keys, setting the GitHub variables and secret, and enabling Pages.
+5. The README SHALL walk through the one-time setup: creating the Supabase project, enabling Cron, checking the sign-up and
+   redirect settings, setting Edge Function secrets, generating VAPID keys, setting the GitHub variables and secret, and
+   enabling Pages.
 6. The README SHALL state the free-plan limits that affect Fastr (one-week pause, 500 MB, rate-limited email, Pages on
    private repos), their effect on notifications and data, and what Supabase Pro costs.
 7. The README SHALL describe a keep-alive option (for example a scheduled GitHub Actions workflow that makes a lightweight

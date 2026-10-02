@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { getSupabase } from '../data/supabase.js';
+import { MIN_PASSWORD_LENGTH } from '../components/PasswordFields.js';
 
 /**
  * Holds the session and exposes the handful of auth actions the app needs.
@@ -22,6 +23,14 @@ export type AuthStatus = 'loading' | 'signedIn' | 'signedOut';
  */
 export type SessionOrigin = 'password' | 'invite' | 'recovery' | null;
 
+/** What `signUp` produced, which is not the same question as whether it failed. */
+export type SignUpOutcome =
+  /** Confirmations are off: the account exists and the user is already signed in. */
+  | { kind: 'signedIn' }
+  /** Confirmations are on: the account exists but needs an emailed link before it can be used. */
+  | { kind: 'confirmationSent' }
+  | { kind: 'error'; message: string };
+
 interface AuthContextValue {
   status: AuthStatus;
   session: Session | null;
@@ -29,6 +38,12 @@ interface AuthContextValue {
   email: string | null;
   origin: SessionOrigin;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+    timeZone: string,
+  ) => Promise<SignUpOutcome>;
   signOut: () => Promise<void>;
   signOutOtherDevices: () => Promise<{ error: string | null }>;
   requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
@@ -64,6 +79,41 @@ function describeSignInError(message: string, status?: number): string {
     return 'Too many attempts. Wait a minute and try again.';
   }
   return GENERIC_CREDENTIALS;
+}
+
+/**
+ * Sign-up failures, in the user's words.
+ *
+ * Unlike sign-in, this one does say "that address already has an account". It reads like an enumeration
+ * leak and it is one — but only because confirmations are off, which makes Supabase itself return
+ * `user_already_exists` here. Paraphrasing that into something vague would hide nothing and would leave
+ * someone who simply forgot they had registered with no idea what to do. Turning confirmations on closes
+ * the leak properly, in the one place it can be closed.
+ */
+function describeSignUpError(error: {
+  message: string;
+  // Optional *and* explicitly undefined-able: `exactOptionalPropertyTypes` is on, and Supabase's
+  // `AuthError` declares these as `number | undefined` rather than omitting them.
+  status?: number | undefined;
+  code?: string | undefined;
+}): string {
+  const { message, status, code } = error;
+  if (status && status >= 500) return 'Fastr could not reach its server. Try again in a moment.';
+  if (code === 'user_already_exists' || /already registered|already exists/i.test(message)) {
+    return 'That email already has an account. Try signing in instead.';
+  }
+  if (code === 'signup_disabled' || /signups? (are |is )?(not allowed|disabled)/i.test(message)) {
+    return 'New accounts are closed at the moment.';
+  }
+  if (code === 'weak_password' || /should be at least|password.*(weak|short)/i.test(message)) {
+    return `Use at least ${MIN_PASSWORD_LENGTH} characters.`;
+  }
+  if (/invalid.*email|email.*invalid/i.test(message))
+    return 'That does not look like an email address.';
+  if (/too many requests|rate limit|over_email_send_rate_limit/i.test(message) || status === 429) {
+    return 'Too many attempts. Wait a minute and try again.';
+  }
+  return 'Fastr could not create that account. Try again in a moment.';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -103,6 +153,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setOrigin('password');
     return { error: null };
   }, []);
+
+  /**
+   * Requirement 1.1. Creating an account.
+   *
+   * The display name and time zone go in `options.data`, which lands in `auth.users.raw_user_meta_data`,
+   * which is exactly where the `on_auth_user_created` trigger reads them from to build the profile row.
+   * That is the only reason this works without a second write: the client has no insert policy on
+   * `profiles` and could not create the row itself.
+   *
+   * Two outcomes rather than one, because "no error" does not mean "signed in". With email confirmations
+   * on, a successful sign-up returns a user and no session, and treating that as success would drop the
+   * user on a screen the route guard immediately bounces them off.
+   */
+  const signUp = useCallback(
+    async (email: string, password: string, displayName: string, timeZone: string) => {
+      const { data, error } = await getSupabase().auth.signUp({
+        email,
+        password,
+        options: {
+          data: { display_name: displayName, time_zone: timeZone },
+          emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}auth/callback`,
+        },
+      });
+
+      if (error) return { kind: 'error' as const, message: describeSignUpError(error) };
+      if (data.session) {
+        setOrigin('password');
+        return { kind: 'signedIn' as const };
+      }
+      // A user with no session means a confirmation email went out. Supabase also returns this shape,
+      // with an obfuscated user, when the address is already registered and confirmations are on — which
+      // is deliberate on their side, and means this branch must not claim the account is new.
+      return { kind: 'confirmationSent' as const };
+    },
+    [],
+  );
 
   const signOut = useCallback(async () => {
     // Requirement 2.5: revoked on the server, not merely cleared locally. `scope: 'local'` would leave
@@ -175,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: session?.user.email ?? null,
       origin,
       signIn,
+      signUp,
       signOut,
       signOutOtherDevices,
       requestPasswordReset,
@@ -188,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       origin,
       signIn,
+      signUp,
       signOut,
       signOutOtherDevices,
       requestPasswordReset,

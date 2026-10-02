@@ -53,7 +53,7 @@ graph TB
     end
 
     subgraph supabase["Supabase project"]
-        auth["Auth<br/>invite-only, JWT"]
+        auth["Auth<br/>open sign-up, JWT"]
         pg[("Postgres<br/>tables + RLS<br/>constraints + triggers<br/>notification queue")]
         rt["Realtime<br/>fast changes"]
         cron["Cron<br/>every minute"]
@@ -87,7 +87,7 @@ it is the entire reason Supabase is the back end rather than a static app with l
 | Component | Role | Why this and not something else |
 | --- | --- | --- |
 | **GitHub Pages** | Serves the built SPA. | Free, already where the code lives, and one workflow deploys it. Netlify or Cloudflare Pages would add HTTP headers, which Pages cannot do, but also a second account and a second place to look when something breaks. Revisit if the meta-tag CSP proves too limiting. |
-| **Supabase Auth** | Accounts, passwords, JWTs, password reset. | Writing authentication is the single worst use of time on a project like this. Invite-only is a dashboard setting rather than code. |
+| **Supabase Auth** | Accounts, passwords, JWTs, password reset. | Writing authentication is the single worst use of time on a project like this. Whether sign-up is open is a dashboard setting rather than code, so it can be closed again without a deploy. |
 | **Postgres + RLS** | Data, and every rule that matters. | The browser talks to it directly, so it has to be the security boundary. RLS is the feature that makes a published anon key safe. |
 | **Supabase Realtime** | Push fast changes to other open devices. | Requirement 5.6 needs a second device to notice. Realtime is already there and needs no extra service; polling on focus is the fallback and is implemented anyway for when the socket is down. |
 | **Supabase Cron** | Fires the notification sender every minute. | `pg_cron` inside the same Postgres, so the schedule is a migration rather than a separate service. A GitHub Actions cron was the alternative and is limited to five minutes at best, often much worse under load. |
@@ -671,7 +671,9 @@ src/
     History.tsx         List plus calendar (Req 9).
     Stats.tsx           Streaks, averages, weight chart (Req 10, 11).
     Settings.tsx        Profile, theme, notifications, export, delete (Req 3, 14, 16).
-    SignIn.tsx          Sign in, password reset, invite acceptance (Req 1, 2).
+    SignIn.tsx          Sign in and password reset (Req 2).
+    SignUp.tsx          Creating an account (Req 1).
+    AcceptInvite.tsx    Finishing an owner-issued invitation (Req 1.8).
   components/           Ring, StageList, FastCard, Calendar, WeightChart, MoodPicker.
   data/
     supabase.ts         The single client. Created once.
@@ -944,7 +946,7 @@ What the free plan costs in reliability, and where it stops being acceptable:
 | Project pauses after one week of inactivity | While paused, the app cannot sign in and sends no notifications | `keep-alive.yml`; the 30-minute skip stops a flood on restore; export exists so data is never trapped |
 | 500 MB database | Not a constraint. A decade of fasts for a handful of users is single-digit megabytes | None needed |
 | 50,000 monthly active users | Not a constraint | None needed |
-| Built-in email is rate-limited | Invites and password resets are limited to a few per hour | Fine for invite-only. Attach a real SMTP provider if it ever matters |
+| Built-in email is rate-limited | Two messages an hour. Password resets and invites are the only things that send mail | Sign-up confirmations are off, so signing up needs no email at all. Attach a real SMTP provider before turning them on |
 | Pages needs a public repo on a free GitHub plan | The code is public | Nothing secret is committed; the anon key is public by design and RLS is the boundary |
 
 Upgrading to Supabase Pro at $25 a month removes the pause and is a dashboard click. Nothing in this design depends on a

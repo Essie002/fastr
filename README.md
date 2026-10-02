@@ -124,8 +124,13 @@ in the bundle anyway. The key that does matter is the service role key, which ex
 
 1. **Create a Supabase project.** Note its reference and its anon key.
 
-2. **Make it invite-only.** Authentication → Sign In / Up → disable public sign-ups. Leave the email provider itself
-   enabled: turning that off disables email sign-_in_ too, and every login fails with "Email logins are disabled".
+2. **Check the sign-up setting.** Authentication → Sign In / Up. Leave "allow new users to sign up" **on** — that is what
+   lets people create their own accounts, and it is what the app's sign-up form needs. Leave the email provider itself
+   enabled too: turning that off disables email sign-_in_, and every login fails with "Email logins are disabled".
+
+   Leave "confirm email" **off** unless you have configured real SMTP. Supabase's built-in mailer sends two messages an
+   hour, so with confirmations on the third person to sign up in an hour cannot get in. The app handles both settings; see
+   [Who can sign up](#who-can-sign-up).
 
 3. **Enable the extensions** the notification schedule needs: `pg_cron` and `pg_net`, under Database → Extensions.
 
@@ -151,8 +156,30 @@ in the bundle anyway. The key that does matter is the service role key, which ex
 
 7. **Enable Pages**, with GitHub Actions as the source.
 
-8. **Invite yourself.** Authentication → Users → Invite. The link lands on `/fastr/auth/callback`, which is the only
-   route that will turn a URL into a session.
+8. **Make yourself an account.** Open the deployed app and use the sign-up form. Or, if you would rather not have sign-up
+   open at all, see [Who can sign up](#who-can-sign-up) below and invite yourself instead.
+
+### Who can sign up
+
+By default, anyone. The sign-in screen links to a sign-up form, and submitting it creates the account and signs the person
+straight in.
+
+That is safe here for a specific reason rather than by luck: every row in the database is owned by one user and is reachable
+only through that user's own JWT, enforced by row-level security in Postgres rather than by the app. A stranger who signs up
+gets an empty account of their own and no way to see anyone else's. The thing open sign-up costs you is rows, not privacy.
+
+**To close it again**, with no code change: Authentication → Sign In / Up → turn off "allow new users to sign up", and set
+`enable_signup = false` under `[auth]` in `supabase/config.toml` so local development matches. The form stays shipped and
+says "New accounts are closed at the moment" when someone tries, because the form cannot know the setting — only the server's
+answer can tell it.
+
+**To add people yourself** once it is closed: Authentication → Users → Invite. The link lands on `/fastr/auth/callback`,
+which is the only route that will turn a URL into a session, and from there the invited person sets a name and a password.
+This route keeps working whether sign-up is open or closed.
+
+**To require a confirmed email address**, first configure real SMTP under `[auth.email.smtp]`, then turn on "confirm email".
+The app already handles it: sign-up then shows a check-your-inbox screen instead of signing the person in, and the
+confirmation link lands on the same callback route.
 
 ### Afterwards
 
@@ -185,12 +212,12 @@ rot unnoticed.
 
 What that costs in reliability:
 
-| Limit                                                                                                 | Effect                                                                  | What is done about it                                             |
-| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| A free project [pauses after a week idle](https://supabase.com/docs/guides/platform/compute-and-disk) | While paused, nobody can sign in and no notifications are sent          | `keep-alive.yml` pings every three days; export exists regardless |
-| 500 MB database                                                                                       | Not a constraint. A decade of fasts for a few people is a few megabytes | Nothing needed                                                    |
-| Built-in email is rate-limited                                                                        | A handful of invites and password resets per hour                       | Fine for invite-only; attach real SMTP if it matters              |
-| Pages on a private repository needs GitHub Pro                                                        | This repository is public                                               | Nothing secret is committed                                       |
+| Limit                                                                                                 | Effect                                                                  | What is done about it                                                                           |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| A free project [pauses after a week idle](https://supabase.com/docs/guides/platform/compute-and-disk) | While paused, nobody can sign in and no notifications are sent          | `keep-alive.yml` pings every three days; export exists regardless                               |
+| 500 MB database                                                                                       | Not a constraint. A decade of fasts for a few people is a few megabytes | Nothing needed                                                                                  |
+| Built-in email is rate-limited                                                                        | Two messages an hour: password resets and invites                       | Sign-up needs no email, so this is rarely hit; attach real SMTP before turning confirmations on |
+| Pages on a private repository needs GitHub Pro                                                        | This repository is public                                               | Nothing secret is committed                                                                     |
 
 Supabase Pro at $25 a month removes the pause, and nothing here depends on free-plan behaviour, so that upgrade is a
 dashboard click and no code change.

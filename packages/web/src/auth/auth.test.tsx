@@ -153,15 +153,144 @@ describe('signing in', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/too many attempts/i);
   });
 
-  it('offers no way to sign up (Req 1.1)', async () => {
+  it('offers a way to create an account (Req 1.1)', async () => {
     installSupabaseStub({ session: null });
     renderApp(<App />, { route: '/' });
     await screen.findByRole('heading', { level: 2, name: 'Sign in' });
 
+    await userEvent.click(screen.getByRole('link', { name: /create an account/i }));
     expect(
-      screen.queryByRole('button', { name: /sign up|create account|register/i }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByText(/invite-only/i)).toBeInTheDocument();
+      await screen.findByRole('heading', { level: 2, name: 'Create your account' }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('signing up (Req 1.1)', () => {
+  it('creates the account and lands on the plan chooser', async () => {
+    const stub = installSupabaseStub({ session: null, tables: { profiles: [profileRow()] } });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    // The name and time zone must travel as auth metadata: the profile trigger reads them from there,
+    // and this client has no insert policy on profiles to fall back on.
+    expect(stub.calls.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'ada@fastr.test',
+        password: 'fastr-local-dev',
+        options: expect.objectContaining({
+          data: { display_name: 'Ada', time_zone: expect.any(String) },
+        }),
+      }),
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: /plan/i })).toBeInTheDocument();
+  });
+
+  it('trims the email and the name', async () => {
+    const stub = installSupabaseStub({ session: null, tables: { profiles: [profileRow()] } });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), '  Ada  ');
+    await userEvent.type(screen.getByLabelText('Email'), ' ada@fastr.test ');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(stub.calls.signUp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        email: 'ada@fastr.test',
+        options: expect.objectContaining({
+          data: expect.objectContaining({ display_name: 'Ada' }),
+        }),
+      }),
+    );
+  });
+
+  it('refuses a mistyped confirmation without calling the server', async () => {
+    const stub = installSupabaseStub({ session: null });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dEV');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/do not match/i);
+    expect(stub.calls.signUp).not.toHaveBeenCalled();
+  });
+
+  it('refuses a blank name without calling the server', async () => {
+    const stub = installSupabaseStub({ session: null });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), '   ');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/between 1 and 40/i);
+    expect(stub.calls.signUp).not.toHaveBeenCalled();
+  });
+
+  it('says so plainly when the address already has an account', async () => {
+    // Unlike sign-in, this does distinguish — with confirmations off Supabase returns
+    // `user_already_exists` regardless, so paraphrasing it into something vague hides nothing and
+    // leaves someone who forgot they had registered with nothing to act on.
+    installSupabaseStub({
+      session: null,
+      authErrors: {
+        signUp: { message: 'User already registered', code: 'user_already_exists', status: 422 },
+      },
+    });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already has an account/i);
+  });
+
+  it('explains a closed sign-up rather than failing silently', async () => {
+    // What the app looks like if `[auth] enable_signup` is false in the hosted project but the form
+    // is still shipped. The form cannot know, so it has to read the server's answer.
+    installSupabaseStub({
+      session: null,
+      authErrors: { signUp: { message: 'Signups not allowed', code: 'signup_disabled' } },
+    });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/new accounts are closed/i);
+  });
+
+  it('asks the user to check their inbox when confirmation is required', async () => {
+    // A user and no session. Treating this as success would drop them on a screen the guard bounces.
+    installSupabaseStub({ session: null, signUpNeedsConfirmation: true });
+    renderApp(<App />, { route: '/signup' });
+
+    await userEvent.type(await screen.findByLabelText('Your name'), 'Ada');
+    await userEvent.type(screen.getByLabelText('Email'), 'ada@fastr.test');
+    await userEvent.type(screen.getByLabelText('Choose a password'), 'fastr-local-dev');
+    await userEvent.type(screen.getByLabelText('Confirm password'), 'fastr-local-dev');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Check your inbox' }),
+    ).toBeInTheDocument();
   });
 });
 

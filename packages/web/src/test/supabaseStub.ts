@@ -19,10 +19,20 @@ export interface StubOptions {
   /** Errors, keyed by the auth method that should fail. */
   authErrors?: Partial<
     Record<
-      'signInWithPassword' | 'setSession' | 'updateUser' | 'resetPasswordForEmail' | 'signOut',
-      { message: string; status?: number }
+      | 'signInWithPassword'
+      | 'signUp'
+      | 'setSession'
+      | 'updateUser'
+      | 'resetPasswordForEmail'
+      | 'signOut',
+      { message: string; status?: number; code?: string }
     >
   >;
+  /**
+   * Makes `signUp` return a user and no session, as a project with email confirmations on does.
+   * Without this the two sign-up outcomes are indistinguishable in a test.
+   */
+  signUpNeedsConfirmation?: boolean;
   /** Rows returned by `from(table).select()`, keyed by table. */
   tables?: Record<string, unknown[]>;
   /** Tables whose writes should fail. */
@@ -78,6 +88,7 @@ export interface Stub {
   emitAuthChange: (event: string, session: Session | null) => void;
   calls: {
     signInWithPassword: ReturnType<typeof vi.fn>;
+    signUp: ReturnType<typeof vi.fn>;
     signOut: ReturnType<typeof vi.fn>;
     setSession: ReturnType<typeof vi.fn>;
     updateUser: ReturnType<typeof vi.fn>;
@@ -113,6 +124,7 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
 
   const calls = {
     signInWithPassword: vi.fn(),
+    signUp: vi.fn(),
     signOut: vi.fn(),
     setSession: vi.fn(),
     updateUser: vi.fn(),
@@ -212,6 +224,28 @@ export function installSupabaseStub(options: StubOptions = {}): Stub {
         } as never);
         listeners.forEach((listener) => listener('SIGNED_IN', session));
         return { data: { session, user: session.user }, error: null };
+      },
+      signUp: async (credentials: {
+        email: string;
+        password: string;
+        options?: { data?: Record<string, unknown> };
+      }) => {
+        calls.signUp(credentials);
+        const failure = fail('signUp');
+        if (failure) return { data: { session: null, user: null }, ...failure };
+
+        const user = {
+          ...makeSession().user,
+          email: credentials.email,
+          user_metadata: credentials.options?.data ?? {},
+        };
+        // Confirmations on: the account exists, but it is not usable until the emailed link is opened.
+        if (options.signUpNeedsConfirmation) {
+          return { data: { session: null, user }, error: null };
+        }
+        session = makeSession({ user } as never);
+        listeners.forEach((listener) => listener('SIGNED_IN', session));
+        return { data: { session, user }, error: null };
       },
       signOut: async (opts?: { scope?: string }) => {
         calls.signOut(opts);
